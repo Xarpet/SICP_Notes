@@ -298,7 +298,7 @@ Finally we need to start the process:
 
 ```scheme
 (define (sqrt x)
-  sqrt-iter 1.0 x))
+  (sqrt-iter 1.0 x))
 ```
 
 It's done! This shows how iteration can be accomplished using no special construct other than the ordinary ability to call a procedure. (About efficiency see tail recursion)
@@ -353,7 +353,7 @@ It's done! This shows how iteration can be accomplished using no special constru
     (< (/ (abs (- old-guess new-guess)) x) 0.001))
   
   (define (sqrt x)
-    sqrt-iter 1.0 x))
+    (sqrt-iter 1.0 x))
   ```
 
   The key here is in line 2 where we are able to compare two consecutive guesses `guess` and `improve(guess x)`.
