@@ -73,9 +73,9 @@ Note that the first rule implies that we must also evaluate the operator since i
 
 After repeated evaluating, we will come to a point where all the members of the combinations are all primitive objects, which can be then dealt with using:
 
-	- The values of numerals are the numbers that they name
-	- The values of built-in operators are the *machine instruction* sequences that carry out the corresponding operations
-	- The values of other names are the objects associated with those names in the environment
+- The values of numerals are the numbers that they name
+- The values of built-in operators are the *machine instruction* sequences that carry out the corresponding operations
+- The values of other names are the objects associated with those names in the environment
 
 We may regard the second rule as a special case of the third, when we regard symbols like `+` and `*` are included in the global environment and has the corresponding machine instructions as their values.
 
@@ -379,8 +379,35 @@ It's done! This shows how iteration can be accomplished using no special constru
 
   Note that the Lisp way of calling functions are not `improve(guess x)` but `(improve guess x)`. It's kind of confusing.
 
-### Procedures as Black-Box Abstractions
+### 1.1.8 Procedures as Black-Box Abstractions
 
 In our `sqrt` process, we decomposed the procedure into separate parts—where each of the sub-procedures can be deemed as black-box abstractions when called by another sub-procedure.
 A user should not need to know how the procedure is implemented in order to use it.
+
+Local names should also not matter in a procedural acstraction. That is, the following procedures should be indisguishiable:
+
+```scheme
+(define (square x) (* x x))
+(define (square y) (* y y))
+```
+
+The formal parameters of a procedure is a *bound variable*, and the procedure definition `binds` its formal parameters. The set of expressions for which a binding defines a name is called the *scope* of that name. If a variable is not bound (that is, it being global) it's called a *free* variable.
+
+Another way we can achieve name isolation is by localizing subprocedures. In our previos code, although the only procedure that matters to the user is `sqrt`, we are also taking the names of `good-enough?` and `improve`, which we cannot use later on. Therefore, we could *localize* the subprocedures by doing this:
+
+```scheme
+(define (sqrt x)
+	(define (good-enough? guess x)
+		(< (abs (- (square guess) x)) 0.001))
+	(define (improve guess x) (average guess (/ x guess)))
+	(define (sqrt-iter guess x)
+		(if (good-enough? guess x)
+			guess
+			(sqrt-iter (improve guess x) x)))
+(sqrt-iter 1.0 x))
+```
+
+Such nesting of definition is called *block structure*. There's another benefit of doing this: since `x` is always bound in the definition of `sqrt`, and now all the subprocedures are also in the definition of `sqrt`, we do not have to pass `x` as a parameter to these subprocedures anymore: we allow `x` to be a free variable in the internal definitions. Such discipline is called *lexical scoping* (It states that free variables in a procedure are looked up in the environment in which the procedure was defined.)
+
+
 
