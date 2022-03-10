@@ -679,5 +679,245 @@ One should not conclude that *tree recursion* is useless. For example the interp
 
   This is not mine, but look at this beautiful code please.
 
+#### Exercise 1.11-1.13
 
+- 1.11
+    $$
+    f(n)=\begin{cases} n &if &n <3\\
+    f(n-1)+2f(n-2)+3f(n-3) & if & n\ge 3 \end{cases}
+    $$
+    The recursive process:
 
+    ```scheme
+    (define (nfib n)
+      (if (< n 3) n 
+          (+ (nfib (- n 1)) (* 2 (nfib (- n 2))) (* 3 (nfib (- n 3))))))
+    ```
+
+    The iterative process:
+
+    ```scheme
+    (define (nfib n) (define (nfib-iter a b c count)
+      (cond ((< n 3) n)
+            ((= count n) a)
+            (else 
+             (nfib-iter b c (+ c (* 2 b) (* 3 a)) (+ count 1)))))
+       (nfib-iter 1 2 4 1))
+    ```
+
+    It is obvious that the iterative version is more time efficient
+
+- 1.12
+    Pascal's triangle using recursive process:
+
+    ```scheme
+    (define (pascal row col)
+      (cond ((or (= col 0) (= col row))
+            1)
+            (else (+ (pascal (- row 1) col)
+              	 	(pascal (- row 1) (- col 1))))))
+    ```
+    
+    Can you please pay attention to add `else` because it took me literally for ever to find out.
+    
+    Using Iterative process: Please just use the Binomial Theorem
+    
+- 1.13
+
+    Prove that $Fib(n)$ is the closest integer to  $\varphi^n / \sqrt{5}$ .
+
+    Let $\psi := (1-\sqrt{5})/2$. Now we are going to prove $Fib(n)=(\varphi^n-\psi^n)/\sqrt{5}$ using (double) induction:
+    $$
+    \text{For }n=1\text{ or }2, Fib(n)=(\varphi^n-\psi^n)/\sqrt{5}; \\ 
+    \text{For }n>2, Fib(n)=Fib(n-1)+Fib(n-2) \\
+    =\frac{(\varphi^{n-1}-\psi^{n-1})}{\sqrt{5}}+\frac{(\varphi^{n-2}-\psi^{n-2})}{\sqrt{5}}\\
+    =\frac{(\varphi^{n-2}(1+\varphi))-(\psi^{n-2}(1+\psi))}{\sqrt{5}}\\
+    \text{since }\varphi+1=\varphi^2,\psi+1=\psi^2\\
+    Fib(n)=(\varphi^n-\psi^n)/\sqrt{5} \\Q.E.D
+    $$
+    It is clear that $\psi^n/\sqrt{5}<1/2$ for all $n$, so $Fib(n)$ is the closest integer to $\varphi^n/\sqrt{5}$
+
+### 1.2.3 Orders of Growth
+
+Let's use $R(n)$ to denote the amount of resources in general a certain process requires to solve a problem of size $n$. 
+
+We say that $R(n)$ has order of growth $\Theta(f(n))$, i.e. $R(n)=\Theta(f(n))$, when there are positive constants $k_1$ and $k_2$ independent of $n$ such that $k_1f(n)\le R(n) \le k_2f(n)$ for any sufficiently large value of n.
+
+Some examples: For the iterative factorial, the number of steps is $\Theta(n)$ while the space is $\Theta(1)$ (a constant). For the tree-recursive Fibonacci, steps is $\Theta(\varphi^n)$ while space is $\Theta(n)$
+
+While orders of growth dismisses the $k$ constants and are crude, they are very useful.
+
+#### Exercise 1.14-1.15
+
+-   1.14
+    Not shown here.
+
+    Order of growth for space is clearly $\Theta(n)$ since this is recursive process and the longest call will be all pennies.
+
+    Order of growth for steps is actually $\Theta(n^k)$ where $k$ is the total kinds of coins. You can see why that is the case [here](https://codology.net/post/sicp-solution-exercise-1-14/)
+
+-   1.15
+
+    ```scheme
+    (define (cube x) (* x x x))
+    (define (p x) (- (* 3 x) (* 4 (cube x))))
+    (define (sine angle)
+    	(if (not (> (abs angle) 0.1))
+    		angle
+    		(p (sine (/ angle 3.0)))))
+    ```
+
+    a.:
+    $$
+    log_{\frac{1}{3}}(\frac{0.1}{12.15})\approx4.36
+    $$
+    So five times. A tip, you can do this in scheme to track the calling of a certain procedure:
+
+    ```scheme
+    (trace-entry p)
+    ```
+
+    b.:
+    $$
+    log_{\frac{1}{3}}(\frac{0.1}{a})=log_3(10a)
+    $$
+    So the number of steps is $\Theta(\log{a})$, and because it's recursive process, the space is also $\Theta(\log{a})$
+
+### 1.2.4 Exponentiation
+
+We can use calculate exponentials using recursive process:
+
+```scheme
+(define (expt b n)
+	(if (= n 0)
+		1
+		(* b (expt b (- n 1)))))
+```
+
+Clearly space and space is both $\Theta(n)$. The iterative version of this
+
+```scheme
+(define (expt b n)
+	(expt-iter b n 1))
+(define (expt-iter b counter product)
+	(if (= counter 0)
+		product
+		(expt-iter b
+				   (- counter 1)
+				   (* b product))))
+```
+
+has $\Theta(n)$ steps and $\Theta(1)$ space.
+
+We can compute faster using successive squaring. For instance, instead of multiplying eight times for $b^8$, we can instead use only three multiplications:
+$$
+b^2=&b\times b\\
+b^4 =& b^2\times b^2 \\ 
+b^8=&b^4\times b^4
+$$
+For odds we just follow the old way.
+
+```scheme
+(define (fast-expt b n)
+	(cond ((= n 0) 1)
+		((even? n) (square (fast-expt b (/ n 2))))
+		(else (* b (fast-expt b (- n 1))))))
+(define (even? n)
+  (= (remainder n 2) 0))
+```
+
+Both the steps and space is $\Theta(\log{n})$ here; observe how computing $b^{2n}$ only takes one more step than $b^n$.
+
+#### Exercise 1.16-1.19
+
+-   1.16
+    
+    ```scheme
+    (define (expt b n)
+    	(expt-iter b n 1))
+    (define (expt-iter b exponent product)
+    	(cond ((= exponent 0) product)
+                  ((even? exponent) (expt-iter (* b b) (/ exponent 2) product))
+                  (else (expt-iter b (- exponent 1) (* product b)))))
+    ```
+    
+    This is actually a bit tricky, as you can only "square" b by making directly squaring the base—I mean, you cannot do `(square (expt-iter b (\ exponent 2) product))` 'cause that would make the process recursive.
+    
+    An *invariant identity* (here it is $product*b^n=constant$ throught out the process) is often very important when designing iterative processes.
+    
+-   1.17
+    
+    ```scheme
+    (define (* a b)
+    	(if (= b 0)
+    		0
+    		(+ a (* a (- b 1)))))
+    ```
+    
+    above is the original
+    
+    ```scheme
+    (define (* a b)
+      (define (double x) (+ x x))
+      (define (halve x) (/ x 2))
+      (cond ((= b 0) 0)
+            ((even? b) (* (double a) (halve b)))
+            (else (+ a (* a (- b 1))))
+            ))
+    ```
+    
+-   1.18
+    The iterative version:
+
+    ```scheme
+    (define (* a b)
+      (define (double x) (+ x x))
+      (define (halve x) (/ x 2))
+      (define (*-iter a b acc)
+        (cond ((= b 0) acc)
+              ((even? b) (*-iter (double a) (halve b) acc))
+              (else (*-iter a (- b 1) (+ acc a)))
+              ))
+      (*-iter a b 0))
+    ```
+
+-   1.19
+
+    We exert $T_{pq}$ twice:
+    $$
+    a_1=b_0q+a_0(q+p)\\
+    b_1=b_0p+a_0q \\
+    a_2=b_1q+a_1(q+p)=b_0qp+a_0q^2+b_0(q^2+qp)+a_0(q^2+2qp+p^2)\\
+    =b_0(q^2+2qp)+a_0(2q^2+2qp+p^2)\\
+    b_2=b_1p+a_1q=b_0p^2+a_0qp+b_0q^2+a_0(q^2+qp)\\
+    =b_0(p^2+q^2)+a_0(q^2+2qp)
+    $$
+    It is evident that
+    $$
+    p'=(p^2+q^2)\\
+    q'=(q^2+2qp)
+    $$
+    Therefore, whenever `N` (rest of the way to go) is even, we can square this transformation and cut it down in half (because we are walking two steps at once now.)
+    
+    ```scheme
+    (define (fib n)
+        (fib-iter 1 0 0 1 n))
+    
+    (define (fib-iter a b p q n)
+        (cond ((= n 0)
+                b)
+              ((even? n)
+                (fib-iter a 
+                          b
+                          (+ (square p) (square q)) 
+                          (+ (* 2 p q) (square q)) 
+                          (/ n 2)))
+              (else
+                (fib-iter (+ (* b q) (* a q) (* a p))
+                          (+ (* b p) (* a q))
+                          p
+                          q
+                          (- n 1)))))
+    ```
+    
+    
