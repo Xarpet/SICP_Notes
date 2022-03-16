@@ -5,6 +5,8 @@
 - [Companion website by MIT](https://mitpress.mit.edu/sites/default/files/sicp/index.html)
 - [中文版题解](https://sicp.readthedocs.io/en/latest/)
 - [SICP-solutions](http://community.schemewiki.org/?SICP-Solutions)
+- How to import codes into your program:
+  `(#%require "lib.scm")`
 
 # Chapter 1: Building Abstractions with Procedures
 
@@ -909,8 +911,8 @@ Both the steps and space is $\Theta(\log{n})$ here; observe how computing $b^{2n
               ((even? n)
                 (fib-iter a 
                           b
-                          (+ (square p) (square q)) 
-                          (+ (* 2 p q) (square q)) 
+                          (+ (square p) (square q)) ;Compute p'
+                          (+ (* 2 p q) (square q)) ;Compute q'
                           (/ n 2)))
               (else
                 (fib-iter (+ (* b q) (* a q) (* a p))
@@ -920,4 +922,235 @@ Both the steps and space is $\Theta(\log{n})$ here; observe how computing $b^{2n
                           (- n 1)))))
     ```
     
+
+### 1.2.5 Greatest Common Divisors
+
+When calculating GCD, we can utilize *Euclid's Algorithm*, which states:
+$$
+GCD(a,b)=GCD(b,a\space mod \space b)
+$$
+(辗转相除法)
+This is because:
+$$
+a-kb=r\\
+\text{Assuming d is a common divisor of a and b}\\
+a/d-kb/d=r/d\\
+\text{Obviously d is also the divisor of r.}
+$$
+Let's write down the procedure:
+```scheme
+(define (gcd a b)
+  (if (= b 0)
+      a
+      (gcd b (remainder a b))))
+```
+
+This is an iterative process whose time complexity is $\Theta(\log{x})$. This fact is proved using *Lamé’s Theorem*:
+
+>   If Euclid’s Algorithm requires k steps to compute the GCD of some pair, then the smaller number in the pair must be greater than or equal to the k th Fibonacci number.
+
+Proof of this is trivial, just consider pairs $(a_k,b_k)$, where k is the number of steps required for the Euclid's Algorithm to terminate. Obviously, we have $a_k=qb_k+b_{k-1}$, where $q\ge 1$. Therefore $b_{k+1}\ge b_k+b_{k-1}$. Using induction we can prove the theorem.
+Therefore if $n$ is the smaller number, and the process requires $k$ steps, we have $n\ge Fib(k)\approx \varphi^k/\sqrt{5}$, which means that the time order of growth is $\Theta(\log{n})$.
+
+#### Exercise 1.20
+
+-   1.20
+
+    ```scheme
+    (define (gcd a b)
+    	(if (= b 0)
+    	a
+    	(gcd b (remainder a b))))
+    ; in the normal-order
+    gcd(206, 40)
+    gcd(40, (remainder 206 40))
+    gcd((remainder 206 40), (remainder 40 (remainder 206 40))); here intepreter evaluated (remainder 206 40)
+    gcd((remainder 40 (remainder 206 40)), (remainder (remainder 206 40) (remainder 40 (remainder 206 40)))); here intepreter evaluated (remainder 40 (remainder 206 40))
+    gcd((remainder (remainder 206 40) (remainder 40 (remainder 206 40))), (remainder (remainder 40 (remainder 206 40)) (remainder (remainder 206 40) (remainder 40 (remainder 206 40)))); here the intepreter evaluated (remainder (remainder 206 40) (remainder 40 (remainder 206 40)))
+    (remainder (remainder 206 40) (remainder 40 (remainder 206 40))); here the intepreter evaluated (remainder (remainder 40 (remainder 206 40)) (remainder (remainder 206 40) (remainder 40 (remainder 206 40)))) and is zero.
+    2
+    ```
     
+    Normal-order: For every step, the number of remainder calls grows with the Fibonacci series, so the total calls should be $\approx \sum_{n=1}^{k}{Fib(n)}$ where $k$ is the total number of steps.
+    Applicative-order: $k$ times
+
+### 1.2.6 Example: Testing for Primality
+
+One way to test the primality of a number is to find its divisors.
+
+```scheme
+(define (smallest-divisor n) (find-divisor n 2))
+(define (find-divisor n test-divisor)
+	(cond ((> (square test-divisor) n) n)
+		((divides? test-divisor n) test-divisor)
+		(else (find-divisor n (+ test-divisor 1)))))
+	(define (divides? a b) (= (remainder b a) 0))
+
+(define (prime? n)
+  (= n (smallest-divisor n)))
+```
+
+The first `cond` statement utilize the obvious fact that a non-self divisor of a number is always less than or equal to its square root. Therefore the time complexity is $\Theta(\sqrt{n})$
+
+Another way to test promality is to utilize the *Fermat's Little Theorem*:
+
+> **Fermat’s Little Theorem:** If $n$ is a prime number and $a$ is any positive integer less than $n$, then 
+> $$
+> a^n\equiv a\mod{n}
+> $$
+
+To say in conditions:
+
+> If $a<n$ and $a^n\not\equiv a\mod{n}$,
+>
+> $n$ is not prime.
+
+ Note that we need to test multiple numbers to make sure that $n$ is prime.
+
+We also need a procedure that computes the exponential of a number modulo another number:
+
+```scheme
+(define (expmod base exp m)
+	(cond ((= exp 0) 1)
+			((even? exp)
+			(remainder
+			(square (expmod base (/ exp 2) m))
+			m))
+	(else
+		(remainder
+		(* base (expmod base (- exp 1) m))
+		m))))
+```
+
+This is based on the fact that
+$$
+x*y\mod{m}=[(x\mod{m})*(y\mod{m})]\mod{m}
+$$
+So
+$$
+a^b\mod{m}=\begin{cases}
+((a\mod{m})*(a^{b-1}\mod{m}))\mod{m}, &\text{when }b\text{ is odd}  \\
+(a^{b/2}\mod{m})^2\mod{m}, &\text{when }b\text{ is even}
+\end{cases}
+$$
+That way we don't have to deal with enourmous numbers. The procedure is:
+
+```scheme
+(define (fast-prime? n times)
+  (define (fermat-test n)
+	(define (try-it a)
+		(= (expmod a n n) a))
+    
+  	(try-it (+ 1 (random (- n 1)))))
+  
+  (cond ((= times 0) true)
+		((fermat-test n) (fast-prime? n (- times 1)))
+		(else false)))
+```
+
+where `random` returns a nonnegative integer less than its parameter. This algorithm has a time complexity of $\Theta({\log{n}})$
+
+---
+
+Here, the Fermat test is different from most familiar algorithms: it is not guaranteed to be correct. Besides the fact that testing not enough times will not give a 100% true result, there are also non-prime integers called *Carmichael numbers* who will never fail the Fermat test for all integers less than itself.
+
+#### Exercise 1.21-1.28
+
+- 1.21
+
+  ```scheme
+  (smallest-divisor 199)
+  :199
+  (smallest-divisor 1999)
+  :1999
+  (smallest-divisor 19999)
+  :7
+  ```
+
+- 1.22
+  `runtime` is a function without parameter that returns the running time. Note that `runtime` uses second as unit. `real-time-clock` uses milisecond.
+  This exercise is really stupid and the solution is trivial. The answers are no, no and no.
+
+- 1.23
+
+  ```scheme
+  (define (next x)
+    (cond ((= x 2) 3)
+          (else (+ x 2))))
+  ```
+
+  The answer is still no.
+  **Note** that in Scheme, redefining a function will overwrite its definition.
+
+- 1.24
+  Modifying this is trivial
+  The actual runtime depends on a lot of things, and time complexity doesn't always accurately predict the runtime. However, its trend is almost always correct.
+
+- 1.25
+  As usual she is wrong
+  The problem is that sometimes the result of directly calculating the exponential is enormous and will cause overflow. Hoever the `expmod` procedure will limit the result to be less than $m$ every time because the remainder is calculated.
+
+- 1.26
+  The thing is, in an applicative-order process, all parameters are first calculated before being substituted into the procedure. So in `(square (expmod base (/ exp 2) m))` the `expmod` is only called once, while in `(remainder (* (expmod base (/ exp 2) m) (expmod base (/ exp 2) m)) m)` the `expmod` is called twice. This basically render the whole even case useless.
+
+- 1.27
+
+  ```scheme
+  (define (fermat-test n)
+    (define (iter-fermat-test a)
+      (cond ((= a n) #t)
+            ((= (expmod a n n) a) (iter-fermat-test (+ a 1)))
+  		  (else #f)))
+    (iter-fermat-test 1))
+  ```
+
+  ```scheme
+  > (fermat-test 561)
+  #t
+  > (fermat-test 1105)
+  #t
+  > (fermat-test 2465)
+  #t
+  > (fermat-test 2821)
+  #t
+  > (fermat-test 6601)
+  #t
+  ```
+
+- 1.28
+
+  ```scheme
+  (define (square-remainder-test x m)
+    (cond ((or (= x (- m 1)) (= x 1)) (remainder (square x) m))
+          ((= (remainder (square x) m) 1) 0)
+          (else (remainder (square x) m))))
+        
+        
+  (define (expmod base exp m)
+    (cond ((= exp 0) 1)
+          ((even? exp)
+           (square-remainder-test (expmod base (/ exp 2) m) m))
+          (else
+           (remainder (* base (expmod base (- exp 1) m))
+                      m))))        
+  
+  (define (fermat-test n)
+    (define (iter-fermat-test a)
+      (cond ((= a n) #t)
+            ((= (expmod a (- n 1) n) 1) (iter-fermat-test (+ a 1)))
+            (else #f)))
+    (iter-fermat-test 1))
+  ```
+
+  ```scheme
+  > (fermat-test 561)
+  #f
+  > (fermat-test 1105)
+  #f
+  > (fermat-test 1999)
+  #t
+  ```
+
+  ## 1.3 Formulating Abstractions with Higher-Order Procedures
+
+  
