@@ -1153,4 +1153,454 @@ Here, the Fermat test is different from most familiar algorithms: it is not guar
 
   ## 1.3 Formulating Abstractions with Higher-Order Procedures
 
+  Who said procedures can only take numbers and spit out numbers? Now we are going to examine *higher-order procedures*, which can take other procedures as parameters and return procedures as values.
+
+  ### 1.3.1 Procedures as Arguments
+
+  Consider the following procedures:
+  ```scheme
+  (define (sum-integers a b)
+    (if (> a b)
+        0
+        (+ a (sum-integers (+ a 1) b))))
   
+  (define (sum-cubes a b)
+    (if (> a b)
+        0
+        (+ (cube a) (sum-cubes (+ a 1) b))))
+  
+  (define (pi-sum a b)
+    (if (> a b)
+        0
+        (+ (/ 1.0 (* a (+ a 2))) (pi-sum (+ a 4) b))))
+  ```
+
+  Which are respectively:
+  $$
+  \sum^{b}_{x=a}x \\
+  \sum^{b}_{x=a}x^3 \\
+  \sum^{b}_{x=a}\frac{1}{(4x-3)*(4x-1)}\approx \frac{\pi}{8}
+  $$
+  We want to make abstraction of the **summation sign** because that is what these three procedures all have in common. For a summation process of this kind:
+  $$
+  \sum^b_{x=a}f(x)
+  $$
+  As a programmer, we would like our language to be powerful enough so that we can write a procedure that expresses the concept of summation itself rather than only procedures that computes particular sums.
+
+  ```scheme
+  (define (sum term a next b)
+    (if (> a b)
+        0
+        (+ (term a)
+           (sum term (next a) next b))))
+  ```
+
+  Where `term` is the procedure that defines $f(x)$, and `next` is the increment of each step. They are both procedures.
+
+  Now we can use it to define all three procedures:
+  ```scheme
+  (define (inc n) (+ n 1))
+  
+  (define (identity x) x)
+  (define (sum-integers a b)
+    (sum identity a inc b))
+  
+  (define (sum-cubes a b)
+    (sum cube a inc b))
+  
+  (define (pi-sum a b)
+    (define (pi-term x)
+      (/ 1.0 (* x (+ x 2))))
+    (define (pi-next x)
+      (+ x 4))
+    (sum pi-term a pi-next b))
+  ```
+
+  Once we have `sum`, we can define more concepts like *definite integrals*. Using this formula:
+  $$
+  \int_a^bf=[f(a+\frac{dx}{2})+f(a+dx+\frac{dx}{2})+f(a+2dx+\frac{dx}{2})+...]dx
+  $$
+
+  ```scheme
+  (define (integral f a b dx)
+    (define (add-dx x) (+ x dx))
+    (* (sum f (+ a (/ dx 2)) add-dx b)
+       dx))
+  ```
+
+  #### Exercise 1.29-1.33
+
+- 1.29
+
+  ```scheme
+  (define (simpson f a b n)
+    (define (coe x y)
+      (cond ((or (= x 0) (= x y)) 1)
+            ((even? x) 2)
+            (else 4)))
+    (define (iter-simpson count sum)
+      (if (> count n)
+          sum
+          (iter-simpson (+ count 1) (+ sum (* (/ 1 3) (/ (- b a) n) (* (coe count (/ (- b a) n)) (f (+ a (* count (/ (- b a) n))))))))))
+    (iter-simpson 0 0))
+  ```
+
+  The accruacy of my solution is terrible and I do not intend to find out why.
+
+- 1.30
+
+  ```scheme
+  (define (sum term a next b)
+    (define (iter-sum x acc)
+    (if (> x b)
+        acc
+        (iter-sum (next x) (+ acc (term x)))))
+    (iter-sum a 0))
+  ```
+
+- 1.31
+
+  ```scheme
+  (define (product term a next b)
+    (define (iter-sum x acc)
+    (if (> x b)
+        acc
+        (iter-sum (next x) (* acc (term x)))))
+    (iter-sum a 1))
+  ```
+
+- 1.32
+
+  ```scheme
+  (define (accumulate combiner null-value term a next b)
+    (define (iter-acc x acc)
+    (if (> x b)
+        acc
+        (iter-acc (next x) (combiner acc (term x)))))
+    (iter-acc a null-value))
+  ```
+
+- 1.33
+
+  ```scheme
+  (define (filtered-accumulate filter combiner null-value term a next b)
+    (define (iter-acc x acc)
+    (if (> x b)
+        acc
+        (if (filter x)
+            (iter-acc (next x) (combiner acc (term x)))
+            (iter-acc (next x) acc)))
+    (iter-acc a null-value)))
+  ```
+
+  ```scheme
+  (filtered-accumulate prime? + 0 square a inc b)
+  ```
+
+  ```scheme
+  (filtered-accumulate (lambda (x) (= (gcd x n) 1)) * identity 1 inc (- n 1))
+  ```
+
+### 1.3.2 Constructing Procedures Using `lambda`
+
+As we have discovered, the ability to name an anomynous procedure will be very useful when the procedure is very simple. It doesn't infringe our valuable name space.
+Using `lambda` we can do that.
+
+```scheme
+(lambda (x) (+ x 1))
+```
+
+This is a way of describing `inc`. Generally the syntax of `lambda` is
+```scheme
+(lambda (<formal-parameters>) <body>)
+```
+
+Note that even if there is only one formal parameter you will also need a parenthesis around it. The body does not.
+Like any expression that has a procedure as its value, you can use this as an operator
+
+```scheme
+((lambda (x y z) (+ x y (square z))) 1 2 3)
+:12
+```
+
+Another syntactic sugar we can utilize is `let`, which create local variables. Let's say we want to compute
+$$
+f(x,y)=x(1+xy)^2+y(1-y)+(1+xy)(1-y)
+$$
+which could be simplified by using variables $a$ and $b$:
+$$
+a=1+xy \\ 
+b=1-y\\
+f(x,y)=xa^2+yb+ab
+$$
+Now if we want to do that, we can use `let` which defines local variables:
+
+```scheme
+(define (f x y)
+  (let ((a (+ 1 (* x y)))
+        (b (- 1 y)))
+    (+ (* x (square a))
+       (* y b)
+       (* a b))))
+```
+
+The general syntax of `let` is
+
+```scheme
+(let ((<var1> <exp1>)
+      (<var2> <exp2>)
+      ...
+      (<varn> <expn>))
+  <body>)
+;consisely:
+(let (<the var and expression tuples>)
+<body>)
+```
+
+In reality, this syntactic sugar is intepreted as 
+```scheme
+((lambda) (<var1> ... <varn>)
+	<body>)
+<exp1> <exp2> ... <expn>)
+```
+
+No new mechanism is required in the interpreter in order to provide local variables. A `let` is simply `lambda`. This implies that:
+
+- `let` variables are entirely local. For example, if `x` is 5, then the following expression:
+
+  ```scheme
+  (+ (let ((x 3))
+      	(+ x (* x 10)))
+      x)
+  ```
+
+  Will still be 38.
+
+- The variables' values are computed outside the `let` expression. To see that:
+  ```scheme
+  (let ((x 3)
+       (y (+ x 2)))
+     (* x y))
+  ```
+
+  Now we transform the expression:
+  ```scheme
+  ((lambda (x y) (* x y)) 3 (+ x 2))
+  ```
+
+  From this perspective we can see that the meaning of `(+ x 2)` has nothing to do with the `x` inside the `let` expression (but only the outside value of `x` which could be anything) because in applicative order `(+ x 2)` will first be evaluated.
+
+We can still use internal definition to define local variables like
+```scheme
+(define (f x y)
+  (define a (+ 1 (* x y)))
+  (define b (- 1 y))
+  (+ (* x (square a))
+     (* y b)
+     (* a b)))
+```
+
+However there are subtleties that we can yet understand. Note that internal definition of procedures is always fine.
+
+#### Exercise 1.34
+
+- 1.34
+
+  ```scheme
+  > (f f)
+  application: not a procedure;
+   expected a procedure that can be applied to arguments
+    given: 2
+  ```
+
+  The reason is that the interpreter will substitute `(f f)` for `(f 2)` (note that although `f` is an argument here, it doesn't get evaluated because it is already a primitive object) and then `(2 2)`. `2` is not a valid procedure and therefore cannot be an operator.
+
+### 1.3.3 Procedures as General Methods
+
+After abstracting computational patterns of numerical operations, we can now abstract general methods as procedures without mentioning explicitly the functions involved.
+
+- Finding roots of equations by the half-interval method
+
+The *half-interval* method is a powerful technique for finding roots of an equation $f(x)=0$. If we are given points $a$ and $b$ that $f(a)<0<f(b)$, then there must be a root between $a$ and $b$. If we evaluate $f((a+b)/2)$, we can further narrow the root to half the interval. The time complexity is obviously $\Theta(\log{(L/T)})$, where $L$ is the initial interval and $T$ is the error tolerance or the final interval.
+```scheme
+(define (search f neg-point pos-point)
+  (let ((midpoint (average neg-point pos-point)))
+    (if (close-enough? neg-point pos-point)
+        midpoint
+        (let ((test-value (f midpoint)))
+          (cond ((positive? test-value)
+                 (search f neg-point midpoint))
+                ((negative? test-value)
+                 (search f midpoint pos-point))
+                (else midpoint))))))
+
+(define (close-enough? x y)
+  (< (abs (- x y)) 0.001))
+```
+
+This procedure is very fragile because the `neg-point` and the `pos-point` we initially give must have the correct sign for the procedure to work. We can add a pre-processing procedure to make sure:
+```scheme
+(define (half-interval-method f a b)
+  (let ((a-value (f a))
+        (b-value (f b)))
+    (cond ((and (negative? a-value) (positive? b-value))
+           (search f a b))
+          ((and (negative? b-value) (positive? a-value))
+           (search f b a))
+          (else
+           (error "Values are not of opposite sign" a b)))))
+```
+
+`error` takes arguments and print them as error messages.
+
+- Finding fixed points of functions
+
+A number $x$ is called a *fixed point* of function $f$ if it satisfy $f(x)=x$. For some functions, we can locate a fixed point by applying $f$ repeatedly until the value doesn't change very much:
+```scheme
+(define tolerance 0.00001)
+
+(define (fixed-point f first-guess)
+  (define (close-enough? v1 v2)
+    (< (abs (- v1 v2)) tolerance))
+  (define (try guess)
+    (let ((next (f guess)))
+      (if (close-enough? guess next)
+          next
+          (try next))))
+  (try first-guess))
+```
+
+A lot of equations can be turned into a fixed point problem. For example if you want to solve $y^2=x$, you can look for the fixed point of the function $y \mapsto x/y$. Unfortunately this does not converge because it results in an infinite loop. One way to control this is to prevent the guesses from changing that much.
+Generally, the way to do that is to:
+$$
+x=f(x)  \rarr  x=\frac{1}{2}(x+f(x))
+$$
+So that now we can calculate the fixed point of function $x\mapsto \frac{1}{2}(x+f(x))$. This technique is called *average damping*.
+
+### Exercise 1.35-1.39
+
+- 1.35
+  $$
+  x^2=x+1 \rarr x=1+1/x
+  $$
+
+  ```scheme
+  > (fixed-point (lambda (x) (+ 1 (/ 1 x))) 1.0)
+  1.6180339631667064
+  ```
+
+- 1.36
+
+  ```scheme
+  (define tolerance 0.0001)
+  
+  (define (fixed-point f first-guess)
+    (define (close-enough? v1 v2)
+      (< (abs (- v1 v2)) tolerance))
+    (define (try guess)
+      (display guess)
+      (newline)
+      (let ((next (f guess)))
+        (if (close-enough? guess next)
+            next
+            (try next))))
+    (try first-guess))
+  ```
+
+  ```scheme
+  ;without average damping
+  > (fixed-point (lambda (x) (/ (log 1000) (log x))) 10)
+  10
+  2.9999999999999996
+  6.2877098228681545
+  3.7570797902002955
+  5.218748919675316
+  4.1807977460633134
+  4.828902657081293
+  4.386936895811029
+  4.671722808746095
+  4.481109436117821
+  4.605567315585735
+  4.522955348093164
+  4.577201597629606
+  4.541325786357399
+  4.564940905198754
+  4.549347961475409
+  4.5596228442307565
+  4.552843114094703
+  4.55731263660315
+  4.554364381825887
+  4.556308401465587
+  4.555026226620339
+  4.55587174038325
+  4.555314115211184
+  4.555681847896976
+  4.555439330395129
+  4.555599264136406
+  4.555493789937456
+  4.555563347820309
+  
+  ;with average damping
+  > (fixed-point (lambda (x) (/ (+ x (/ (log 1000) (log x))) 2)) 10)
+  10
+  6.5
+  5.095215099176933
+  4.668760681281611
+  4.57585730576714
+  4.559030116711325
+  4.55613168520593
+  4.555637206157649
+  4.55555298754564
+  ```
+
+- 1.37
+
+  ```scheme
+  (define (cont-frac n d k)
+    (define (cont-frac-rec x)
+      (if (> x k)
+          0
+          (/ (n x) (+ (d x) (cont-frac-rec (+ x 1))))))
+    (cont-frac-rec 1))
+  ```
+
+  ```scheme
+  (define (cont-frac n d k)
+    (define (cont-frac-iter x acc)
+      (if (= x 0)
+          acc
+          (cont-frac-iter (- x 1) (/ (n x) (+ (d x) acc)))))
+    (cont-frac-iter k 0))
+  ```
+
+  It takes about 11 steps to get 4 decimal place.
+
+- 1.38
+
+  ```scheme
+  (define (d i)
+    (cond ((= (remainder i 3) 2) (* 2 (/ (+ 1 i) 3)))
+          (else 1)))
+  
+  (define (n i)
+    1)
+  ```
+  
+  ```scheme
+  > (+ 2 (cont-frac n d 15))
+  2.718281828470584
+  ```
+  
+- 1.39
+  
+  ```scheme
+  (define (tancf x k)
+    (define (d i)
+      (- (* 2 i) 1))
+    (define (n i)
+      (if (= i 1) x (-(* x x))))
+    (cont-frac n d k))
+  ```
+
+### 1.3.4 Procedures as Returned Values
+
