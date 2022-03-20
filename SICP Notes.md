@@ -8,7 +8,7 @@
 - How to import codes into your program:
   `(#%require "lib.scm")`
 
-# Chapter 1: Building Abstractions with Procedures
+# 1 Building Abstractions with Procedures
 
 Through out the book we will use `Scheme`, a dialect of lisp to program.
 
@@ -1151,6 +1151,7 @@ Here, the Fermat test is different from most familiar algorithms: it is not guar
   #t
   ```
 
+
   ## 1.3 Formulating Abstractions with Higher-Order Procedures
 
   Who said procedures can only take numbers and spit out numbers? Now we are going to examine *higher-order procedures*, which can take other procedures as parameters and return procedures as values.
@@ -1176,15 +1177,15 @@ Here, the Fermat test is different from most familiar algorithms: it is not guar
   ```
 
   Which are respectively:
-  $$
+$$
   \sum^{b}_{x=a}x \\
   \sum^{b}_{x=a}x^3 \\
   \sum^{b}_{x=a}\frac{1}{(4x-3)*(4x-1)}\approx \frac{\pi}{8}
-  $$
+$$
   We want to make abstraction of the **summation sign** because that is what these three procedures all have in common. For a summation process of this kind:
-  $$
+$$
   \sum^b_{x=a}f(x)
-  $$
+$$
   As a programmer, we would like our language to be powerful enough so that we can write a procedure that expresses the concept of summation itself rather than only procedures that computes particular sums.
 
   ```scheme
@@ -1217,9 +1218,9 @@ Here, the Fermat test is different from most familiar algorithms: it is not guar
   ```
 
   Once we have `sum`, we can define more concepts like *definite integrals*. Using this formula:
-  $$
+$$
   \int_a^bf=[f(a+\frac{dx}{2})+f(a+dx+\frac{dx}{2})+f(a+2dx+\frac{dx}{2})+...]dx
-  $$
+$$
 
   ```scheme
   (define (integral f a b dx)
@@ -1603,4 +1604,194 @@ So that now we can calculate the fixed point of function $x\mapsto \frac{1}{2}(x
   ```
 
 ### 1.3.4 Procedures as Returned Values
+
+Now we have learnt how to pass procedures as arguments, we can further this idea by allowing procedures as return values.
+Remember the `average damping` technique? We want a procedure where given a function $f$, we return the function whose value at $x$ is equal to the average of $x$ and $f(x)$.
+
+```scheme
+(define (average-damp f)
+  (lambda (x) (average x (f x))))
+```
+
+Using this idea we can reformulate the `sqrt` procedure:
+```scheme
+(define (sqrt x)
+  (fixed-point (average-damp (lambda (y) (/ x y)))
+               1.0))
+```
+
+- Newton's method
+  This method states that the zeroes of any differentiable function `g(x)` is the fixed point of the function $x \mapsto f(x)$ where
+  $$
+  f(x)=x-\frac{g(x)}{g'(x)}
+  $$
+  To express this idea we first need to define derivative:
+  ```scheme
+  (define (deriv g)
+    (lambda (x)
+      (/ (- (g (+ x dx)) (g x))
+         dx)))
+  (define dx 0.00001)
+  ```
+
+  Now
+  ```scheme
+  (define (newton-transform g)
+    (lambda (x)
+      (- x (/ (g x) ((deriv g) x)))))
+  (define (newtons-method g guess)
+    (fixed-point (newton-transform g) guess))
+  
+  (define (sqrt x)
+    (newtons-method (lambda (y) (- (square y) x))
+                    1.0))
+  ```
+
+- Abstractions and first-class procedures:
+  Now we've actually defined `sqrt` using three different implementation of the fixed-point method:
+  $y\mapsto x/y$ (note that this doesn't work), the average damp of $y\mapsto x/y$, and the Newton transformation of $y\mapsto y^2 - x$.
+  Now we want a general procedure that can express all these methods:
+
+  ```scheme
+  (define (fixed-point-of-transform g transform guess)
+    (fixed-point (transform g) guess))
+  
+  (define (sqrt x)
+    (fixed-point-of-transform (lambda (y) (/ x y))
+                              identity
+                              1.0)) ; note that this doesn't work
+  
+  (define (sqrt x)
+    (fixed-point-of-transform (lambda (y) (/ x y))
+                              average-damp
+                              1.0))
+  
+  (define (sqrt x)
+    (fixed-point-of-transform (lambda (y) (- (square y) x))
+                              newton-transform
+                              1.0))
+  ```
+
+  As programmers, we should always be aware of the possibility of abstracting general methods as higher-order procedures and to use them as fundamental elements.
+
+  In general, programming languages impose restrictions on the ways in which computational elements can be manipulated. Elements with the fewest restrictions are said to have first-class status. Some of the “rights and privileges” of first-class elements are:
+
+  - They may be named by variables.
+  - They may be passed as arguments to procedures.
+  - They may be returned as the results of procedures.
+  - They may be included in data structures.
+
+  Lisp grant procedures full first-class status unlike other common programming languages. This will impose some efficiency problems but it is worth it.
+
+#### Exercise 1.40-1.46
+
+- 1.40
+
+  ```scheme
+  (define (cubic a b c)
+    (lambda (x) (+ (* x x x) (* a x x) (* b x) c)))
+  ```
+
+- 1.41
+
+  ```scheme
+  (define (double x)
+    (lambda (a) (x (x a))))
+  ```
+
+  ```scheme
+  > (((double (double double)) inc) 5)
+  21
+  ```
+
+- 1.42
+
+  ```scheme
+  (define (compose f g)
+    (lambda (x) (f (g x))))
+  ```
+
+- 1.43
+    ```scheme
+    (define (repeated f n)
+        (if (= n 1)
+            f
+        (lambda (x) (f ((repeated f (- n 1)) x)))))
+    ```
+
+      Note how you don't need to write `(lambda (x) (f x))` for the first if-clause. `f` is sufficient.
+
+- 1.44
+
+    ```scheme
+    (define (smooth f)
+      (lambda (x) (/ (+ (f (+ x dx)) (f x) (f (- x dx))) 3)))
+    ```
+
+    ```scheme
+    (define (n-time-smooth f n)
+      ((repeated smooth n) f))
+    ```
+
+- 1.45
+    From experiment, we conclude that for calculating the $n$th root we need $\lfloor \lg{n} \rfloor$ (base is 2) times of average damping.
+
+    ```scheme
+    (define (lg n)
+        (cond ((> (/ n 2) 1)
+                (+ 1 (lg (/ n 2))))
+              ((< (/ n 2) 1)
+                0)
+              (else
+                1)))
+    ```
+
+    Note that the flooring is already done.
+    Let's write the n-times average damping procedure:
+
+    ```scheme
+    (define (average-damp-n f n)
+      (if (= n 1)
+          (lambda (x) (/ (+ (f x) x) 2))
+          (lambda (x) (/ (+ (average-damp-n f (- n 1)) x) 2))))
+    
+    (define (nth-root base n)
+      (fixed-point (average-damp-n (lambda (x) (/ base (expt x (- n 1)))) (lg n)) 1.5))
+    ```
+
+    Note that 1.5 is just a initial guess.
+
+- 1.46
+
+    ```scheme
+    (define (iterative-improve enough? improve)
+      (lambda (guess)
+        (if (enough? guess)
+            guess
+            ((iterative-improve enough? improve) (improve guess)))))
+    ```
+
+    ```scheme
+    (define (sqrt x)
+        (define dx 0.00001)
+        (define (close-enough? guess)
+            (< (abs (- (square guess) x)) dx))
+        (define (improve guess)
+            (average guess (/ x guess)))
+        (define (average x y)
+            (/ (+ x y) 2))
+        ((iterative-improve close-enough? improve) 1.0))
+    ```
+
+    ```scheme
+    (define (fixed-point f guess)
+      (define tolerance 0.0000001)
+      (define (enough? x)
+        (< (abs (- (f x) x)) tolerance))
+      ((iterative-improve enough? f) guess))
+    ```
+
+    Note in `fixed-point`, the improve procedure is in fact the `f`.
+
+# 2 Building Abstractions with Data
 
