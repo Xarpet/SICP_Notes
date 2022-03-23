@@ -14,7 +14,7 @@ Through out the book we will use `Scheme`, a dialect of lisp to program.
 
 ## 1.1 The Elements of Programming
 
-> A powerful programming language is more than just a means for instructing a computer to perform tasks. e language also serves as a framework within which we organize our ideas about processes.
+> A powerful programming language is more than just a means for instructing a computer to perform tasks. The language also serves as a framework within which we organize our ideas about processes.
 
 Every powerful programming language has three main ways of combining simple ideas to form more complex ideas:
 
@@ -112,7 +112,7 @@ You can also use procedures to define other procedures, like:
 
 ### 1.1.5 The Substitution Model for Procedure Application
 
-If a combination has an operator that is a compound procedure, the intepreter must follow a certain sequence of process to evaluate the operators and the operands. More specifically, the formal parameters in the body of the procedure (operator) needs to be substituted by the operands(whether already evaluated to primitive objects or still remains to be expressions. See below.)
+If a combination has an operator that is a compound procedure, the interpreter must follow a certain sequence of process to evaluate the operators and the operands. More specifically, the formal parameters in the body of the procedure (operator) needs to be substituted by the operands(whether already evaluated to primitive objects or still remains to be expressions. See below.)
 
 The most intuitive and what lisp uses is *applicative-order evaluation*, where all the operands are fully evaluated to primitive objects before substituting the formal parameters in the procedure. 
 
@@ -125,7 +125,7 @@ The most intuitive and what lisp uses is *applicative-order evaluation*, where a
 25 ;applicative-order evaluation
 ```
 
-Another type of evaluation strategy is called *normal-order evaluation* (there are more) where you do not evaluate any of the arguments until they are needed in the body of the function (or obtained an expression involving only primitive operators).
+Another type of evaluation strategy is called *normal-order evaluation* (there are more) where you do not evaluate **any** of the arguments until they are needed in the body of the function (or obtained an expression involving only primitive operators).
 
 ```scheme
 (sum-of-squares (+ 2 1) (- 5 1))
@@ -136,9 +136,7 @@ Another type of evaluation strategy is called *normal-order evaluation* (there a
 25 ;normal-order evaluation
 ```
 
-
-
-It can be proved that, for legitimate procedures, two strategies will yield the same result.
+Lisp uses *applicative-order evaluation* It can be proved that, for legitimate procedures, two strategies will yield the same result.
 
 ### 1.1.6 Conditional Expressions and Predicates
 
@@ -162,7 +160,7 @@ The general form of a conditional expression is:
 ```
 
 If one of the predicate is evaluated to be true, the intepreter returns the value of the corresponding expression and stop evaluating predicates.
-Predicates are procedures that return true or false.
+Predicates are procedures that return true or false (in Lisp interpreter, they are respectively `#t` and `#f`).
 
 You can also rewrite the `abs` as:
 
@@ -198,7 +196,7 @@ Note that a minor difference between `cond` and `if` is that in `cond` the expre
 (not <e>)
 ```
 
-Note that `and` and `or` are special forms, not procedures, because the subexpressions are not necessarily all evaluated. `not` is a procedure.
+Note that `and` and `or` are special forms, not procedures, because **the sub-expressions are not necessarily all evaluated**. `not` is a procedure.
 
 #### Exercise 1.1-1.5
 
@@ -311,7 +309,7 @@ A guess is improved by averaging:
   (/ (+ x y) 2))
 ```
 
-And by good enough we can code:
+And to determine whether the guess is good enough:
 
 ```scheme
 (define (good-enough? guess x)
@@ -408,7 +406,7 @@ It's done! This shows how iteration can be accomplished using no special constru
 In our `sqrt` process, we decomposed the procedure into separate parts—where each of the sub-procedures can be deemed as black-box abstractions when called by another sub-procedure.
 A user should not need to know how the procedure is implemented in order to use it.
 
-Local names should also not matter in a procedural acstraction. That is, the following procedures should be indisguishiable:
+Local names should also not matter in a procedural abstraction. That is, the following procedures should be indistinguishable:
 
 ```scheme
 (define (square x) (* x x))
@@ -417,7 +415,7 @@ Local names should also not matter in a procedural acstraction. That is, the fol
 
 The formal parameters of a procedure is a *bound variable*, and the procedure definition `binds` its formal parameters. The set of expressions for which a binding defines a name is called the *scope* of that name. If a variable is not bound (that is, it being global) it's called a *free* variable.
 
-Another way we can achieve name isolation is by localizing subprocedures. In our previos code, although the only procedure that matters to the user is `sqrt`, we are also taking the names of `good-enough?` and `improve`, which we cannot use later on. Therefore, we could *localize* the subprocedures by doing this:
+Another way we can achieve name isolation is by localizing sub procedures. In our previous code, although the only procedure that matters to the user is `sqrt`, we are also taking the names of `good-enough?` and `improve`, which we cannot use later on. Therefore, we could *localize* the sub-procedures by doing this:
 
 ```scheme
 (define (sqrt x)
@@ -431,7 +429,7 @@ Another way we can achieve name isolation is by localizing subprocedures. In our
 (sqrt-iter 1.0 x))
 ```
 
-Such nesting of definition is called *block structure*. There's another benefit of doing this: since `x` is always bound in the definition of `sqrt`, and now all the subprocedures are also in the definition of `sqrt`, we do not have to pass `x` as a parameter to these subprocedures anymore: we allow `x` to be a free variable in the internal definitions. Such discipline is called *lexical scoping* (It states that free variables in a procedure are looked up in the environment in which the procedure was defined.)
+Such nesting of definition is called *block structure*. There's another benefit of doing this: since `x` is always bound in the definition of `sqrt`, and now all the sub-procedures are also in the definition of `sqrt`, we do not have to pass `x` as a parameter to these sub-procedures anymore: we allow `x` to be a free variable in the internal definitions. Such discipline is called *lexical scoping* (It states that free variables in a procedure are looked up in the environment in which the procedure was defined.)
 
 ## 1.2 Procedures and the Processes They Generate
 
@@ -441,7 +439,7 @@ We have learned the elements of programming:
 - Combining operations
 - Abstracting composite operations by defining them as procedures
 
-But we are now like a 600-ELO player on chess.com: we know all the rules (except maybe en passant), but we don't yet know the common patterns of usage. We now must learn to visualize the processes generated by procedures.
+But we are now like a 600-ELO player on chess.com: we know all the rules (except maybe *en passant*), but we don't yet know the common patterns of usage. We now must learn to visualize the processes generated by procedures.
 
 In this section, we will examine common "shapes" for processes generated by simple procedures and the rate they consume time and space.
 
@@ -594,9 +592,9 @@ Other than *linear recursion*, we also have *tree recursion.* For example, try a
         (else (+ (fib (- n 1)) (fib (- n 2))))))
 ```
 
-This is a terrible way of calculating a fibonacci number. The evolve process looks like a tree, and all the branches split into two at each level. In fact, the tree will end up having a $Fib(n+1)$ number of leaves(can you prove this? **P: subsitute all Fib(x) to Fib(x+1) and now all leaves have value 1**)—this is exponential since $Fib(n)$ is the closest integer to $\varphi^n / \sqrt{5}$ 
+This is a terrible way of calculating a Fibonacci number. The evolve process looks like a tree, and all the branches split into two at each level. In fact, the tree will end up having a $Fib(n+1)$ number of leaves(can you prove this? **P: substitute all Fib(x) to Fib(x+1) and now all leaves have value 1**)—this is exponential since $Fib(n)$ is the closest integer to $\varphi^n / \sqrt{5}$ 
 
-We can also use an iterative process for computing the fibonacci numbers:
+We can also use an iterative process for computing the Fibonacci numbers:
 
 ```scheme
 (define (fib n)
@@ -796,7 +794,7 @@ We can use calculate exponentials using recursive process:
 		(* b (expt b (- n 1)))))
 ```
 
-Clearly space and space is both $\Theta(n)$. The iterative version of this
+Clearly time and space is both $\Theta(n)$. The iterative version of this
 
 ```scheme
 (define (expt b n)
@@ -1320,7 +1318,8 @@ Note that even if there is only one formal parameter you will also need a parent
 Like any expression that has a procedure as its value, you can use this as an operator
 
 ```scheme
-((lambda (x y z) (+ x y (square z))) 1 2 3)
+((lambda (x y z) (+ x y (square z)))
+ 1 2 3)
 :12
 ```
 
@@ -1360,7 +1359,7 @@ The general syntax of `let` is
 
 In reality, this syntactic sugar is intepreted as 
 ```scheme
-((lambda) (<var1> ... <varn>)
+((lambda (<var1> ... <varn>)
 	<body>)
 <exp1> <exp2> ... <expn>)
 ```
@@ -1401,7 +1400,7 @@ We can still use internal definition to define local variables like
      (* a b)))
 ```
 
-However there are subtleties that we can yet understand. Note that internal definition of procedures is always fine.
+However there are subtleties that we can yet understand. Note that the internal definition of procedures is always fine.
 
 #### Exercise 1.34
 
@@ -1681,7 +1680,7 @@ Using this idea we can reformulate the `sqrt` procedure:
   - They may be returned as the results of procedures.
   - They may be included in data structures.
 
-  Lisp grant procedures full first-class status unlike other common programming languages. This will impose some efficiency problems but it is worth it.
+  Lisp grants procedures full first-class status unlike other common programming languages. This will impose some efficiency problems but it is worth it.
 
 #### Exercise 1.40-1.46
 
@@ -1794,4 +1793,454 @@ Using this idea we can reformulate the `sqrt` procedure:
     Note in `fixed-point`, the improve procedure is in fact the `f`.
 
 # 2 Building Abstractions with Data
+
+In this chapter we are going to look at more complex data. Instead of combining procedures to form compound procedures, we now construct compound data objects by combining data objects.
+
+There are many advantages when using compound data. One of them is that it enables *data abstraction*, which is the general technique of isolating the parts of a program that deal with how data objects are represented from the parts that deal with how data object are used.
+
+We will see how data abstraction enables us to erect *abstraction barriers*, and that the key to forming compound data is to provide some kind of "glue".  We will explore the idea of *closure* and *conventional interfaces*, as well as *generic operations* and *data-directed programming*.
+
+## 2.1 Introduction to Data Abstraction
+
+In section 1.1.8 we noted how black-box abstraction works for procedures: we can know nothing about the detail of the implementation of procedures. Same thing works with data—*data abstraction*. The interface between these two parts of the system will be a set of procedures called *selectors* and *constructors*. Let's design a set of procedures that manipulate rational numbers:
+
+### 2.1.1 Example: Arithmetic Operations for Rational Numbers
+
+Let us begin by *wishful thinking* that we already have ways to construct a rational number from a numerator and a denominator (a *constructor*) and given a rational number we have ways to extract its numerator and denominator (a *selector*).
+
+- `(make-rat <n> <d>)`
+- `(numer <x>)` and `(denom <x>)`
+
+We don't yet care how these are implemented. Using these we can then add, subtract, multiply, divide and test equality by the following relations:
+$$
+\frac{n_1}{d_1}+\frac{n_2}{d_2} =& \frac{n_1d_2+n_2d_1}{d_1d_2}\\
+\frac{n_1}{d_1}-\frac{n_2}{d_2} =& \frac{n_1d_2-n_2d_1}{d_1d_2}\\
+\frac{n_1}{d_1}\times \frac{n_2}{d_2} =& \frac{n_1n_2}{d_1d_2}\\
+\frac{n_1/d_1}{n_2/d_2} =& \frac{n_1d_2}{d_1n_2} \\
+\frac{n_1}{d_1} =& \frac{n_2}{d_2} \quad \text{if and only if   }n_1d_2=n_2d_1
+$$
+We can express these rules as procedures:
+
+```scheme
+(define (add-rat x y)
+  (make-rat (+ (* (numer x) (denom y))
+               (* (numer y) (denom x)))
+            (* (denom x) (denom y))))
+
+(define (sub-rat x y)
+  (make-rat (- (* (numer x) (denom y))
+               (* (numer y) (denom x)))
+            (* (denom x) (denom y))))
+
+(define (mul-rat x y)
+  (make-rat (* (numer x) (numer y))
+            (* (denom x) (denom y))))
+
+(define (div-rat x y)
+  (make-rat (* (numer x) (denom y))
+            (* (denom x) (numer y))))
+
+(define (equal-rat? x y)
+  (= (* (numer x) (denom y))
+     (* (numer y) (denom x))))
+```
+
+Now it's time to define the concrete level of our data abstraction. Lisp provides a compound structure called a *pair*.
+To construct a *pair*, use a primitive procedure `cons`. To extract the parts, use the primitive procedures `car` and `cdr`.
+
+```scheme
+(define x (cons 1 2))
+
+(car x)
+:1
+(cdr x)
+:2
+```
+
+Note that a pair is a data object that can be given a name and manipulate, just like a primitive data object. You can also nest pairs:
+```scheme
+(define x (cons 1 2))
+(define y (cons 3 4))
+(define z (cons x y))
+(car (car z))
+:1
+(car (cdr z))
+:3
+```
+
+We will see in following sections that this `cons` is the only glue we need to create complex data objects. The objects constructed from pairs are called *list-structured* data.
+
+Now we can represent rational numbers using pairs.
+```scheme
+(define (make-rat n d) (cons n d))
+(define (numer x) (car x))
+(define (denom x) (cdr x))
+
+; note that you can also use an alternative definition
+(define make-rat cons)
+(define numer car)
+(define denom cdr)
+
+(define (print-rat x)
+  (newline)
+  (display (numer x))
+  (display "/")
+  (display (denom x)))
+```
+
+Now we also notice that our implementation does not reduce rational numbers to lowest terms. So we should change `make-rat` to: 
+```scheme
+(define (make-rat n d)
+  (let ((g (gcd n d)))
+    (cons (/ n g) (/ d g))))
+```
+
+Notice how the modification is accomplished only by changing the constructor, without changing any of the procedures that implement the actual operations.
+
+#### Exercise 2.1
+
+- 2.1
+
+  ```scheme
+  (define (make-rat n d)
+    (let ((g (gcd n d)))
+      (if (< d 0)
+          (cons (- (/ n g)) (- (/ d g)))
+          (cons (/ n g) (/ d g)))))
+  ```
+
+### 2.1.2 Abstraction Barriers
+
+- Rational numbers in problem domain
+
+  `add-rat`	`sub-rat`
+
+- Rational numbers as numerators and denominators
+
+  `make-rat`	`numer`	`denom`
+
+- Rational numbers as pairs
+
+  `cons`	`car`	`cdr`
+
+- However pairs are actually implemented
+
+These procedures serve as *abstraction barriers* that isolate different "levels" of the system and also the interface between them. The advantage of doing this is that you can modify any layer without affecting the other layers.
+
+#### Exercise 2.2-2.3
+
+- 2.2
+
+  ```scheme
+  (define (make-segment start-point end-point)
+    (cons start-point end-point))
+  
+  (define (start-segment segment)
+    (car segment))
+  
+  (define (end-segment segment)
+    (cdr segment))
+  
+  (define (make-point x y)
+    (cons x y))
+  
+  (define (x-point point)
+    (car point))
+  
+  (define (y-point point)
+    (cdr point))
+  
+  (define (midpoint-segment segment)
+    (make-point (/ (+ (x-point (start-segment segment)) (x-point (end-segment segment))) 2) (/ (+ (y-point (start-segment segment)) (y-point (end-segment segment))) 2)))
+  ```
+
+- 2.3
+  Note that the diagonal of a rectangle fully represents it, so:
+
+  ```scheme
+  (define (make-rec start-point end-point)
+    (cons start-point end-point))
+  
+  (define (x-length rec)
+    (abs(- (x-point (start-rec rec)) (x-point (end-rec rec)))))
+  
+  (define (y-length rec)
+    (abs(- (y-point (start-rec rec)) (y-point (end-rec rec)))))
+  
+  (define (start-rec rec)
+    (car rec))
+  
+  (define (end-rec rec)
+    (cdr rec))
+  
+  (define (make-point x y)
+    (cons x y))
+  
+  (define (x-point point)
+    (car point))
+  
+  (define (y-point point)
+    (cdr point))
+  
+  (define (perimeter rec)
+    (* 2 (+ (x-length rec) (y-length rec))))
+  
+  (define (area rec)
+    (* (x-length rec) (y-length rec)))
+  ```
+
+  Observe how we can change the implementation constructor `make-rec` and the selector `x-length` and `y-length` to anything else without affecting `perimeter` and `area`
+
+### 2.1.3 What Is Meant by Data
+
+In general, we can think of data as defined by some collection of selectors and constructors, together with specified conditions that these procedures must fulfill in order to be a valid representation. For example, for the rational numbers, the only condition is:
+$$
+\frac{\text{(numer x)}}{\text{(denom x)}}=\frac{n}{d}
+$$
+Another example is pairs: we never said what pairs actually are, we only introduced how `cons`, `car` and `cdr` work: if you glue together two objects using `cons` you can retrieve them using `car` and `cdr`. In fact, any triple of procedures that satisfy this rule can be used for implementing pairs. A **striking** example of this is that we can implement pairs without using any data structure but simply procedures:
+```scheme
+(define (cons x y)
+  (define (dispatch m)
+    (cond ((= m 0) x)
+          ((= m 1) y)
+          (else (error "Argument not 0 or 1 -- CONS" m))))
+  dispatch)
+
+(define (car z) (z 0))
+(define (cdr z) (z 1))
+```
+
+The subtle point here is that, the value returned by `(cons x y)` is actually a procedure—namely, the internally defined procedure called `dispatch`. This is called the procedural representation of data structures.  The point is, although lisp's pair doesn't work this way (they are primitives and are implemented directly,) **the ability to manipulate procedures as common objects automatically provides the ability to represent compound data.** This style of programming is called *message passing* because the way the selector works is through passing message to the constructor's procedure via arguments.
+
+#### Exercise 2.4-2.6
+
+- 2.4
+
+  ```scheme
+  (define (cons x y)
+    (lambda (m) (m x y)))
+  
+  (define (car z)
+    (z (lambda (p q) p)))
+  
+  ;verification
+  (car (cons x y))
+  (car (lambda (m) (m x y)))
+  ((lambda (m) (m x y)) (lambda (p q) p))
+  ((lambda (p q) p) x y)
+  x
+  
+  ;definition of cdr
+  (define (cdr z)
+    (z (lambda (p q) q)))
+  ```
+
+  The point of this definition is that the `cons` simply creates an opportunity for a certain procedure to be exerted upon `x` and `y`. The `car` procedure simply feeds the "select the first argument" procedure into `cons` and then `cons` feed this procedure to `x` and `y`.
+
+- 2.5
+
+  ```scheme
+  (define (cons x y)
+    (* (expt 2 x) (expt 3 y)))
+  
+  (define (car x)
+    (if (= 0 (remainder x 2))
+        (+ 1 (car (/ x 2)))
+        0))
+  
+  (define (cdr x)
+    (if (= 0 (remainder x 3))
+        (+ 1 (car (/ x 3)))
+        0))
+  ```
+
+- 2.6
+
+  ```scheme
+  ;evaluate
+  (add-1 zero)
+  (add-1 (lambda (f) (lambda (x) x)))
+  (lambda (f) (lambda (x) (f ((n f) x)))) ;(n f) is obviously (lambda (x) x)
+  (lambda (f) (lambda (x) (f x))); ((lambda (x) x) x) is x
+  ;this is one.
+  
+  (define one
+    (lambda (f) (lambda (x) (f x))))
+  
+  ;evaluate (add-1 one)
+  (add-1 one)
+  (add-1 (lambda (f) (lambda (x) (f x))))
+  (lambda (f) (lambda (x) (f ((n f) x)))); (n f) is obviously (lambda (x) (f x))
+  (lambda (f) (lambda (x) (f (f x)))) ;((lambda (x) (f x)) x) is (f x)
+  ;this is two
+  
+  (define two
+    (lambda (f) (lambda (x) (f (f x)))))
+  ```
+  It's easy to see now that numbers here are procedures that eats one procedure as an argument and then return a procedure like `(lambda (x) (f (f (f (f...(f x))))))` where the number is the amount of nested `f`. The `add-1` procedure first feeds the number with a procedure `f`, and then feed the returned procedure with a argument `x`, and then wrap another `f` around the whole thing to add one.
+  
+  ```scheme
+  (define (+ a b)
+    (lambda (f) (lambda (x) ((b f) ((a f) x)))))
+  ;moreover we can see that
+  (define (* a b)
+    (lambda (f) (b (a f))))
+  
+  (define (exp a b)
+    (b a))
+  ```
+  
+
+### 2.1.4 Extended Exercise: Interval Arithmetic
+
+Hacker wants to design a system to help calculate inexact numbers involving an interval.
+```scheme
+(define (add-interval x y)
+  (make-interval (+ (lower-bound x) (lower-bound y))
+                 (+ (upper-bound x) (upper-bound y))))
+
+(define (mul-interval x y)
+  (let ((p1 (* (lower-bound x) (lower-bound y)))
+        (p2 (* (lower-bound x) (upper-bound y)))
+        (p3 (* (upper-bound x) (lower-bound y)))
+        (p4 (* (upper-bound x) (upper-bound y))))
+    (make-interval (min p1 p2 p3 p4)
+                   (max p1 p2 p3 p4))))
+
+(define (div-interval x y)
+  (mul-interval x 
+                (make-interval (/ 1.0 (upper-bound y))
+                               (/ 1.0 (lower-bound y)))))
+```
+
+#### Exercise 2.7-2.16
+
+- 2.7
+
+  ```scheme
+  (define (lower-bound inv)
+    (car inv))
+  
+  (define (upper-bound inv)
+    (cdr inv))
+  ```
+
+- 2.8
+
+  ```scheme
+  (define (sub-interval x y)
+    (make-interval (- (lower-bound x) (upper-bound y))
+                   (- (upper-bound x) (lower-bound y))))
+  ```
+
+  
+
+- 2.9
+  For addition/subtraction:
+  $$
+  width_{end}=max(width_1,width_2)
+  $$
+  For multiplication, see $(1,2)\times(1,2)=(1,4)$ and $(2,3)\times(2,3)=(4,9)$
+  
+- 2.10
+
+  ```scheme
+  (define (div-interval x y)
+    (if (or (and (< (lower-bound x) 0)
+                 (> (upper-bound x) 0))
+            (and (< (lower-bound y) 0)
+                 (> (upper-bound y) 0)))
+        (error "divide by zero")
+        (mul-interval x 
+                  (make-interval (/ 1.0 (upper-bound y))
+                                 (/ 1.0 (lower-bound y))))))
+  ```
+
+- 2.11
+
+  ```scheme
+  (define (mul-interval x y)
+    (let ((a (lower-bound x))
+          (b (upper-bound x))
+          (c (lower-bound y))
+          (d (upper-bound y)))
+      (cond (((and (< a 0)
+                  (< b 0)
+                  (< c 0)
+                  (< d 0))
+             (make-interval (* b d) (* a c)))
+             ((and (< a 0)
+                  (> b 0)
+                  (< c 0)
+                  (< d 0))
+             (make-interval (* b c) (* a c)))
+             ((and (> a 0)
+                  (> b 0)
+                  (< c 0)
+                  (< d 0))
+             (make-interval (* b c) (* a d)))
+             ((and (< a 0)
+                  (< b 0)
+                  (< c 0)
+                  (> d 0))
+             (make-interval (* a d) (* a c)))
+             ((and (< a 0)
+                  (> b 0)
+                  (< c 0)
+                  (> d 0))
+             (make-interval (min (* a d) (* b c)) (max (* a c) (* b d))))
+             ((and (> a 0)
+                  (> b 0)
+                  (< c 0)
+                  (> d 0))
+             (make-interval (* b c) (* b d)))
+             ((and (< a 0)
+                  (< b 0)
+                  (> c 0)
+                  (> d 0))
+             (make-interval (* a d) (* b c)))
+             ((and (< a 0)
+                  (> b 0)
+                  (> c 0)
+                  (> d 0))
+             (make-interval (* a d) (* b d)))
+             ((and (> a 0)
+                  (> b 0)
+                  (> c 0)
+                  (> d 0))
+             (make-interval (* a c) (* b d)))))))
+  ```
+
+- 2.12
+
+  ```scheme
+  (define (make-center-percent c p)
+    (make-interval (- c (* c (/ p 100))) (+ c (* c (/ p 100)))))
+  
+  (define (center i)
+    (/ (+ (lower-bound i) (upper-bound i)) 2))
+  
+  (define (percent i)
+    (/ (- (upper-bound i) (lower-bound i)) (* 0.02 (center i))))
+  ```
+
+- 2.13
+  $$
+  (1+x)a\times (1+y)b=(1+x+y+xy)ab
+  $$
+  for small $x$ and $y$, the new interval is about the product of the two percentage tolerance.
+
+- 2.14
+  This is actually a rather trivial question after some thought. If a quantity is occuring more than once in a formula, the interval we are calculating might not be correct because the quantity cannot have more than one value at once albeit its uncertaincy. For example, $A/A$ should have been just one—there is no uncertaincy, but in our program it will become an interval.
+
+- 2.15
+  She is right. See above. If all number only occurs once, this will not be a problem at all.
+
+- 2.16
+  I would say that this would require a whole algebraic system to complete since for example even to calculate simple formulas like this involves derivatives:
+  $$
+  x^3-x^2+x, \text{ where x is an interval}
+  $$
+
+## 2.2 Hierarchical Data and the Closure Property
 
