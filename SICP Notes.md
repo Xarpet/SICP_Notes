@@ -2241,6 +2241,233 @@ Hacker wants to design a system to help calculate inexact numbers involving an i
   $$
   x^3-x^2+x, \text{ where x is an interval}
   $$
+  This problem is called [*dependency problem*](https://en.wikipedia.org/wiki/Interval_arithmetic#Dependency_problem).
 
 ## 2.2 Hierarchical Data and the Closure Property
+
+Remember that we can combine pairs using pairs themselves? 
+An operation for combining data objects satisfy the *closure property* if the results of combining things with that operation can themselves be combined using the same operation. It's called *closure* because applying the combination result the same structure.
+Closure permits *hierarchical* structures—structures made up of parts, which themselves are made up of parts and so on and on.
+From Chapter one we know that procedures themselves have closure property.
+
+### 2.2.1 Representing Sequences
+
+Using pairs we can easily form sequences in many ways. One of them is using a list (a chain list):
+```scheme
+(cons 1
+      (cons 2
+            (cons 3
+                  (cons 4 nil))))
+```
+
+`Scheme` provides a primitive called `list` to help constructing:
+
+```scheme
+(list <a1> <a2> ... <an>)
+```
+
+Lisp also conventionally prints lists as natural forms like `(1 2 3 4)`. However, `(1 2 3 4)` itself is not a valid expression (`1` is not a procedure) but only a convenient way to print.
+
+You can use `car` and `cdr` repeatedly to access the elements in a list. You can also use things like `cadr`(stands for `(car (cdr list))`) or `caadr` to abbreviate.
+
+The value of `nil` can be thought of as an empty sequence.
+
+The procedure `list-ref` returns the $nth$ item in a list (note that it start with zero)
+```scheme
+(define (list-ref items n)
+  (if (= n 0)
+      (car items)
+      (list-ref (cdr items) (- n 1))))
+```
+
+Procedure `length`:
+```scheme
+(define (length items)
+  (define (length-iter a count)
+    (if (null? a)
+        count
+        (length-iter (cdr a) (+ 1 count))))
+  (length-iter items 0))
+```
+
+`append` is to concatenate two lists together in that order:
+
+```scheme
+(define (append list1 list2)
+  (if (null? list1)
+      list2
+      (cons (car list1) (append (cdr list1) list2))))
+```
+
+**One important note** 
+Appending single elements into an existing list is pretty hard using only primitive procedures. However, putting the single elements at the top (first) is easy:
+
+````scheme
+(cons first-element list)
+````
+
+Therefore, always try to avoid append. Try using reverse at the end. Especially if you are using a iterative process.
+
+---
+
+You can use the *dotted-tail notation* if you want to include a list in your procedure's parameters:
+```scheme
+(define (f x y . z) <body>)
+;or
+(define f (lambda (x y . z) <body>))
+> (f 1 2 3 4 5 6)
+x: 1
+y: 2
+z: (3 4 5 6)
+
+(define (g . w) <body>)
+;or
+(define g (lambda w <body>)); NOTICE how you don't need the parenthesis when using a single list parameter
+> (g 1 2 3 4)
+w: (1 2 3 4)
+```
+
+#### Exercise 2.17-2.23
+
+- 2.17
+
+  ```scheme
+  (define (last-pair x)
+    (if (null? (cdr x))
+        (car x)
+        (last-pair (cdr x))))
+  ```
+
+- 2.18
+
+  ```scheme
+  (define (reverse l)
+  (define (iter-reverse x acc)
+    (if (null? x)
+        acc
+        (iter-reverse (cdr x) (cons (car x) acc))))
+    (iter-reverse l '()))
+  ```
+
+- 2.19
+
+  ```scheme
+  (define (cc amount coin-values)
+    (define no-more? null?)
+    (define except-first-denomination cdr)
+    (define first-denomination car)
+    (cond ((= amount 0) 1)
+          ((or (< amount 0) (no-more? coin-values)) 0)
+          (else
+           (+ (cc amount
+                  (except-first-denomination coin-values))
+              (cc (- amount
+                     (first-denomination coin-values))
+                  coin-values)))))
+  ```
+
+  No it doesn't affect the answer. Trivial due to symmetry.
+
+- 2.20
+
+  ```scheme
+  (define (same-parity x . z)
+    (define (iter-par par acc rem)
+      (if (null? rem)
+          acc
+          (if (= par (remainder (car rem) 2))
+              (iter-par par (cons (car rem) acc) (cdr rem))
+              (iter-par par acc (cdr rem)))))
+    (reverse (iter-par (remainder x 2) (cons x '()) z))) ; note how you need a nil nested deep inside
+  ```
+
+- **Mapping over lists:**
+  Sometimes you want to apply a procedure to all the elements in a list. Lisp contains a primitive procedure called `map` that can achieve this:
+
+  ```scheme
+  (define (map proc items)
+    (if (null? items)
+        nil
+        (cons (proc (car items))
+              (map proc (cdr items)))))
+  ```
+
+  You can also provide a procedure with $n$ arguments, and then feed it with $n$ lists.
+  ```scheme
+  (map + (list 1 2 3) (list 40 50 60) (list 700 800 900))
+  : (741 852 963)
+  ```
+
+  `maps` provides a higher level of abstraction: it establishes an abstraction barrier that isolates the implementation of procedures that transform lists from the details of how the elements of the list are extracted and combined.
+
+- 2.21
+
+  ```scheme
+  (define (square-list items)
+    (if (null? items)
+        nil
+        (cons (square (car items))
+              (square-list (cdr items)))))
+  
+  (define (square-list items)
+    (map square items))
+  ```
+
+- 2.22
+  This is exactly the thing about appending list: in an iterative process you almost always want to append elements into the `accmulator` list. But that is hard to do. The best is to use `reverse`.
+
+  ```scheme
+  (define (square-list items)
+    (define (iter things answer)
+      (if (null? things)
+          (reverse answer) ;reverse here
+          (iter (cdr things) 
+                (cons (square (car things))
+                      answer))))
+    (iter items nil))
+  ```
+
+- 2.23
+
+  ```scheme
+  (define (for-each proc list)
+    (cond ((null? list))
+          (else (proc (car list)) (for-each proc (cdr list)))))
+  ```
+
+### 2.2.2 Hierarchical Structures
+
+We can often regard complex data objects like `((1 2) 3 4)` as trees. (note how: this is constructed by `(cons (list 1 2) (list 3 4))`!!!! the `cdr` of this object is `(3 4)`!) Recursion is a natural tool when you are trying to do something to the trees because of its closure property.
+We want to implement a `count-leaves` procedure:
+
+```scheme
+(define (count-leaves x)
+  (cond ((null? x) 0)
+        ((not (pair? x)) 1)
+        (else (+ (count-leaves (car x))
+                 (count-leaves (cdr x))))))
+```
+
+#### Exercise 2.24-32
+
+- 2.24
+
+  ```scheme
+  (1 (2 (3 4)))
+  ```
+
+- 2.25
+
+  ```scheme
+  (1 3 (5 7) 9)
+  : cadaddr ;important!
+  ((7))
+  : caar ;note how this is actually (cons (cons 7 nil) nil)
+  (1 (2 (3 (4 (5 (6 7))))))
+  : cadadadadadadad
+  ```
+
+  Always note that **`cdr` always gives a list!!!!** `(cdr (list 5 7))` is `(7)`(i.e. `(cons 7 nil)`) not `7`!!! `(cdr (1 (2 (3 (4 (5 (6 7)))))))` is `((2 (3 (4 (5 (6 7))))))`!!!
+
+  
 
