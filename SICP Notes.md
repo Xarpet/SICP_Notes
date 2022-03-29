@@ -2584,8 +2584,6 @@ That'll do.
          tree))
   ```
 
-  Note how you can 
-
 - 2.30
 
   ```scheme
@@ -2760,4 +2758,211 @@ When we universally represent structures as sequences (using `enumerators`) we h
   ```
 
 - 2.34
+
+  ```scheme
+  (define (horner-eval x coefficient-sequence)
+    (accumulate (lambda (this-coeff higher-terms)
+                  (+ this-coeff (* x higher-terms)))
+                0
+                coefficient-sequence))
+  ```
+
+- 2.35
+
+  ```scheme
+  (define (count-leaves tree)
+    (accumulate (lambda (x y)
+                  (+ x y))
+                0
+                (map (lambda (sub-tree)
+                       (if (pair? sub-tree)
+                           (count-leaves sub-tree)
+                           1)) tree)))
+  ```
+
+  This is actually not a very elegant solution (albeit probably the only), since in this procedure accumulator only serves as a summator while the `lambda` does al the work of counting.
+
+- 2.36
+
+  ```scheme
+  (define (accumulate-n op init seqs)
+    (if (null? (car seqs))
+        nil
+        (cons (accumulate op init (map car seqs))
+              (accumulate-n op init (map cdr seqs)))))
+  ```
+
+- 2.37
+
+  ```scheme
+  (define (matrix-*-vector m v)
+    (map (lambda (rows)
+           (dot-product v rows)) m))
+  
+  (define (transpose mat)
+    (accumulate-n cons '() mat))
+  
+  (define (matrix-*-matrix m n)
+    (let ((cols (transpose n)))
+      (map (lambda (x)
+             (matrix-*-vector cols x)) m)))
+  ```
+
+- 2.38
+
+  ```scheme
+  (define (fold-right op initial sequence)
+    (if (null? sequence)
+        initial
+        (op (car sequence)
+            (fold-right op initial (cdr sequence)))))
+  
+  (define (fold-left op initial sequence)
+    (define (iter result rest)
+      (if (null? rest)
+          result
+          (iter (op result (car rest))
+                (cdr rest))))
+    (iter initial sequence))
+  ```
+
+  ```scheme
+  > (fold-right / 1 (list 1 2 3))
+  1 1/2
+  > (fold-left / 1 (list 1 2 3))
+  1/6
+  > (fold-right list nil (list 1 2 3))
+  (1 (2 (3 ())))
+  > (fold-left list nil (list 1 2 3))
+  (((() 1) 2) 3)
+  ```
+
+  Associative law. `fold-right` and `fold-left` differs from the sequence of applying operators: `fold-right` applies first the rightmost, and vice versa.
+
+- 2.39
+
+  ```scheme
+  (define (reverse sequence)
+    (fold-right (lambda (x y)
+                  (append y (list x)))
+                nil sequence))
+  
+  (define (reverse-l sequence)
+    (fold-left (lambda (x y)
+                 (cons y x))
+                 nil sequence))
+  ```
+
+  Just pay attention to the sequence of applying operators.
+
+- **Nested Mappings**
+  Sometimes we use nested mappings to do nested loops, like:
+
+  ```scheme
+  (accumulate
+  	append nil (map (lambda (i)
+  					(map (lambda (j) (list i j))
+  						 (enumerate-interval 1 (- i 1))))
+  					(enumerate-interval 1 n)))
+  ```
+
+  The `accumulate` at the front is to connect all sub-elements in a nested list into a larger list. We call this `flatmap`
+  ```scheme
+  (define (flatmap proc seq)
+  	(accumulate append nil (map proc seq)))
+  
+  > (flatmap (lambda (x) x) (list (list 1 2) (list 3 4)))
+  (1 2 3 4)
+  ```
+
+- 2.40
+
+  ```scheme
+  (define (unique-pairs n)
+    (flatmap (lambda (i)
+               (map (lambda (j) (list i j))
+                    (enumerate-interval 1 (- i 1)))
+               (enumerate-interval 1 n))))
+  ```
+
+- 2.41
+
+  ```scheme
+  (define (triples s n)
+    (define (sum-s? tri)
+      (= (accumulate + 0 tri) s))
+    (filter sum-s? (flatmap (lambda (k)
+                              (flatmap (lambda (i) ; FLATMAP HERE
+                                     (map (lambda (j) (list k i j))
+                                          (enumerate-interval 1 n)))
+                                     (enumerate-interval 1 n)))
+                            (enumerate-interval 1 n))))
+  ```
+
+  Gentle reminder: **ALWAYS USE FLATMAP WHEN NESTING MORE THAN TWO MAPS**
+
+- 2.42
+
+  ```scheme
+  (define (queens board-size)
+    
+    (define empty-board '())
+    
+    (define (safe? size pos)
+      (define (iter-check row-of-new-queen rest-of-queens i)
+      (if (null? rest-of-queens)  
+          #t
+          (let ((row-of-current-queen (car rest-of-queens)))
+              (if (or (= row-of-new-queen row-of-current-queen)           
+                      (= row-of-new-queen (+ i row-of-current-queen))     
+                      (= row-of-new-queen (- row-of-current-queen i)))    
+                  #f
+                  (iter-check row-of-new-queen 
+                              (cdr rest-of-queens)    
+                              (+ i 1))))))
+      (iter-check (car pos) (cdr pos) 1))
+    
+    (define (adjoin-position row col pos)
+      (cons row pos))
+    
+    (define (queen-cols k)
+      (if (= k 0)
+          (list empty-board)
+          (filter
+           (lambda (positions) (safe? k positions))
+           (flatmap
+            (lambda (rest-of-queens)
+              (map (lambda (new-row)
+                     (adjoin-position new-row k rest-of-queens))
+                   (enumerate-interval 1 board-size)))
+            (queen-cols (- k 1))))))
+    (queen-cols board-size))
+  ```
+
+  In our list we only record the row position of queens in reverse because that saves a lot of time.
+
+- 2.43
+
+  ```scheme
+  ;original version
+  (flatmap
+            (lambda (rest-of-queens)
+              (map (lambda (new-row)
+                     (adjoin-position new-row k rest-of-queens))
+                   (enumerate-interval 1 board-size)))
+            (queen-cols (- k 1)))
+  
+  ;louis's version
+  (flatmap
+  	  (lambda (new-row)
+  	    (map (lambda (rest-of-queens)
+  		   (adjoin-position new-row k rest-of-queens))
+  		 (queen-cols (- k 1)))) ; this gets called eight times every time.
+  	  (enumerate-interval 1 board-size))
+  ```
+
+  It was originally a linear recursive process, and now it is a tree recursive process with 8 leaves every node.
+  The total time would be approx $8^8$? I suppose.
+
+### 2.2.4 Example: A Picture Language
 
