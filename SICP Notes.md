@@ -2448,6 +2448,14 @@ We want to implement a `count-leaves` procedure:
                  (count-leaves (cdr x))))))
 ```
 
+A little tip about recursively visiting every leaves on a tree:
+```scheme
+(cons (proc (car tree))
+      (proc (cdr tree)))
+```
+
+That'll do.
+
 #### Exercise 2.24-32
 
 - 2.24
@@ -2469,5 +2477,287 @@ We want to implement a `count-leaves` procedure:
 
   Always note that **`cdr` always gives a list!!!!** `(cdr (list 5 7))` is `(7)`(i.e. `(cons 7 nil)`) not `7`!!! `(cdr (1 (2 (3 (4 (5 (6 7)))))))` is `((2 (3 (4 (5 (6 7))))))`!!!
 
+- 2.26
   
+  ```scheme
+  > (append x y)
+  (1 2 3 4 5 6)
+  
+  > (cons x y)
+  ((1 2 3) 4 5 6)
+  
+  > (list x y)
+  ((1 2 3) (4 5 6))
+  ```
+  
+- 2.27
+
+  ```scheme
+  (define (deep-reverse l)
+    (define (dreverse x acc)
+      (cond ((null? x)
+           acc)
+          ((pair? (car x))
+           (dreverse (cdr x) (cons (dreverse (car x) '()) acc)))
+          (else
+           (dreverse (cdr x) (cons (car x) acc)))))
+    (dreverse l '()))
+  ```
+
+- 2.28
+  **Note that**, when we talk about trees, we do not consider the `nil` or `'()` part of the list as a general rule.
+
+  ```scheme
+  (define (fringe tree)
+    (cond ((null? tree)
+           '())
+          ((not (pair? tree))
+           (list tree))
+          (else
+           (append (fringe (car tree)) (fringe (cdr tree))))))
+  ```
+
+  **traversing binary tree**:
+
+  - If empty tree, empty list
+  - If leave, return a list with only leave
+  - Else, **append** the left sub-tree `(car tree)` and the right sub-tree `(cdr tree)`
+
+- 2.29
+  a.
+
+  ```scheme
+  (define left-branch car)
+  (define right-branch cadr)
+  
+  (define branch-length car)
+  (define branch-structure cadr)
+  ```
+
+  b.
+  ```scheme
+  (define (total-weight node)
+    (if (not (pair? node))
+        node
+        (+ (branch-structure (left-branch node)) (branch-structure (right-branch node)))))
+  ```
+
+  c.
+  ```scheme
+  (define (balanced? mobile)
+    (cond ((not (pair? mobile))
+           #t)
+          ((= (* (branch-length (left-branch mobile)) (total-weight (branch-structure (left-branch mobile)))) (* (branch-length (right-branch mobile)) (total-weight (branch-structure (right-branch mobile)))))
+           (and (balanced? (branch-structure (left-branch mobile))) (balanced? (branch-structure (right-branch mobile)))))
+          (else
+           #f)))
+  ```
+
+  d.
+
+  ```scheme
+  (define left-branch car)
+  (define right-branch cdr)
+  
+  (define branch-length car)
+  (define branch-structure cdr)
+  ```
+
+  That'll do. We have built an *abstraction barrier*.
+
+- **Mapping over trees**
+  You can also `map` over trees using simple recursion:
+
+  ```scheme
+  (define (scale-tree tree factor)
+    (cond ((null? tree) nil)
+          ((not (pair? tree)) (* tree factor))
+          (else (cons (scale-tree (car tree) factor)
+                      (scale-tree (cdr tree) factor)))))
+  ;alternatively
+  
+  (define (scale-tree tree factor)
+    (map (lambda (sub-tree)
+           (if (pair? sub-tree)
+               (scale-tree sub-tree factor)
+               (* sub-tree factor)))
+         tree))
+  ```
+
+  Note how you can 
+
+- 2.30
+
+  ```scheme
+  (define (square-tree tree)
+    (cond ((null? tree) nil)
+          ((not (pair? tree)) (* tree tree))
+          (else (cons (square-tree (car tree))
+                      (square-tree (cdr tree))))))
+  
+  (define (square-tree tree)
+    (map (lambda (sub-tree)
+           (if (pair? sub-tree)
+               (square-tree sub-tree)
+               (* sub-tree sub-tree)))
+         tree))
+  ```
+
+  Note the usage of `map` in the second procedure.
+
+- 2.31
+
+  ```scheme
+  (define (tree-map proc tree)
+    (map (lambda (sub-tree)
+           (if (pair? sub-tree)
+               (tree-map proc sub-tree)
+               (proc sub-tree)))
+         tree))
+  ```
+
+- 2.32
+
+  ```scheme
+  (define (subsets s)
+    (if (null? s)
+        (list nil)
+        (let ((rest (subsets (cdr s))))
+          (append rest (map (lambda (x)
+                              (cons (car s) x)) rest)))))
+  ```
+
+  When you add a new element into a set, every subset split into two with one without the new element and one with the new element. Build up the set backwards and you'll get this procedure.
+
+### 2.2.3 Sequences as Conventional Interfaces
+
+In this section, we introduce another powerful design principle for working with data structures: *conventional interfaces.* What's that? Imagine a streamline where products are rolling. The sequence would be the product with the streamline being the *signal-flow* structure in this analogy.
+
+Let's revisit our `sum-odd-squares` procedure:
+```scheme
+(define (sum-odd-squares tree)
+  (cond ((null? tree) 0)
+        ((not (pair? tree))
+         (if (odd? tree) (square tree) 0))
+        (else (+ (sum-odd-squares (car tree))
+                 (sum-odd-squares (cdr tree))))))
+```
+
+This looks very different from this following procedure which constructs a list of all the even Fibonacci numbers:
+```scheme
+(define (even-fibs n)
+  (define (next k)
+    (if (> k n)
+        nil
+        (let ((f (fib k)))
+          (if (even? f)
+              (cons f (next (+ k 1)))
+              (next (+ k 1))))))
+  (next 0))
+```
+
+However, they are actually similar because the first program:
+
+- enumerates the leaves of a tree
+- filters them, selecting the odd ones
+- squares each of the selected ones (mapping)
+- accumulate the result using +, starting with 0
+
+The second program:
+
+- enumerates the integers from 0 to n
+- computes the Fibonacci number for each integer (mapping)
+- filters them, selecting the even ones
+- accumulate the results using cons, starting with an empty list
+
+The way we conceptualize these steps are called signal-flow structure.
+However, in both procedures, the signal flow structure is unclear and lack modularity. We want to change that and organize our programs to make the signal-flow structure manifest in the procedures we write.
+
+The key to organize programs this way is to concentrate on the **signals** that flow from one stage in the process to the next. We can represent these signals as lists and use list operations to process the signals.
+
+For instance, for mapping we can simply use the `map` procedure
+```scheme
+(map square (list 1 2 3 4 5))
+```
+
+For filtering we can:
+```scheme
+(define (filter predicate sequence)
+  (cond ((null? sequence) nil)
+        ((predicate (car sequence))
+         (cons (car sequence)
+               (filter predicate (cdr sequence))))
+        (else (filter predicate (cdr sequence)))))
+```
+
+For accumulating:
+```scheme
+(define (accumulate op initial sequence)
+  (if (null? sequence)
+      initial
+      (op (car sequence)
+          (accumulate op initial (cdr sequence)))))
+```
+
+For enumerating (either an interval of a tree) (for trees this is exactly the `fringe` procedure)
+```scheme
+(define (enumerate-interval low high)
+  (if (> low high)
+      nil
+      (cons low (enumerate-interval (+ low 1) high))))
+
+
+(define (enumerate-tree tree)
+  (cond ((null? tree) nil)
+        ((not (pair? tree)) (list tree))
+        (else (append (enumerate-tree (car tree))
+                      (enumerate-tree (cdr tree))))))
+```
+
+Now, we can reformulate the procedures:
+```scheme
+(define (sum-odd-squares tree)
+  (accumulate +
+              0
+              (map square
+                   (filter odd?
+                           (enumerate-tree tree)))))
+
+(define (even-fibs n)
+  (accumulate cons
+              nil
+              (filter even?
+                      (map fib
+                           (enumerate-interval 0 n)))))
+```
+
+This way, we could encourage modular design by providing a library of standard components, together with a *conventional interface* (i.e. the sequence and its operations) for connecting the components in flexible ways.
+
+When we universally represent structures as sequences (using `enumerators`) we have localized the data-structure dependecies to a small number of sequence operations, and these operations can be later on changed while leaving the overall design of our programs intact.
+
+#### Exercise 2.33-2.43
+
+- 2.33
+  To do that, recall the definition of accumulate:
+
+  ```scheme
+  (define (accumulate op initial sequence)
+    (if (null? sequence)
+        initial
+        (op (car sequence)
+            (accumulate op initial (cdr sequence)))))
+  ```
+
+  ```scheme
+  (define (map p sequence)
+    (accumulate (lambda (x y) (cons (p x) y) nil sequence)))
+  
+  (define (append seq1 seq2)
+    (accumulate cons seq2 seq1))
+  
+  (define (length sequence)
+    (accumulate (lambda (x y) (+ 1 y)) 0 sequence))
+  ```
+
+- 2.34
 
