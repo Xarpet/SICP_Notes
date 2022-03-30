@@ -2966,3 +2966,308 @@ When we universally represent structures as sequences (using `enumerators`) we h
 
 ### 2.2.4 Example: A Picture Language
 
+We'll focus on a language that manipulate data objects that are procedures rather than list structures.
+
+There is only one kind of element in this language: `painter`. A `painter` procedure takes a designated parallelogram and draws an image that is shifted and scaled to fit within.  For example there is a primitive painter procedure called `wave`, as well as `rogers`.
+
+To combine images, we can use various operations that construct new painters from given painters. There's `beside` (takes two painter, create compound painter that paints two images side by side), `below`, `flip-vert` and `flip-horiz`.
+
+We can form abstractions:
+```scheme
+(define (right-split painter n)
+  (if (= n 0)
+      painter
+      (let ((smaller (right-split painter (- n 1))))
+        (beside painter (below smaller smaller)))))
+
+(define (corner-split painter n)
+  (if (= n 0)
+      painter
+      (let ((up (up-split painter (- n 1)))
+            (right (right-split painter (- n 1))))
+        (let ((top-left (beside up up))
+              (bottom-right (below right right))
+              (corner (corner-split painter (- n 1))))
+          (beside (below painter top-left)
+                  (below bottom-right corner))))))
+```
+
+- 2.44
+
+  ```scheme
+  (define (up-split painter n)
+    (if (= n 0)
+        painter
+        (let ((smaller (up-split painter (- n 1))))
+          (below painter (beside smaller smaller)))))
+  ```
+
+We can form higher order abstractions by taking painter operations as arguments and create new painter operations. For example:
+```scheme
+(define (square-of-four tl tr bl br)
+  (lambda (painter)
+    (let ((top (beside (tl painter) (tr painter)))
+          (bottom (beside (bl painter) (br painter))))
+      (below bottom top))))
+
+
+(define flipped-pairs
+	(square-of-four identity flip-vert identity flip-vert))
+```
+
+- 2.45
+
+  ```scheme
+  (define (split first second)
+    (lambda (painter n)
+      (if (= n 0)
+        painter
+        (let ((smaller ((split first second) painter (- n 1))))
+          (first painter (second smaller smaller))))))
+  ```
+
+We now must consider frames. A frame can be represented with three vectors: an origin vector that defines its position in the plane and two edge vectors that define its shape.
+
+In an image, we map the coordinate of a unit square into the parallelogram.
+$$
+\text{Origin(Frame)+ $x\times$ Edge1(Frame)+$y\times$ Edge2(Frame)}
+$$
+The procedure that creates the mapping procedure would be:
+```scheme
+(define (frame-coord-map frame)
+  (lambda (v)
+    (add-vect
+     (origin-frame frame)
+     (add-vect (scale-vect (xcor-vect v)
+                           (edge1-frame frame))
+               (scale-vect (ycor-vect v)
+                           (edge2-frame frame))))))
+```
+
+Observe that applying this to a frame returns a procedure that, given a vector in the image's unit square coordinate, returns a vector in the actual plane.
+
+- 2.46
+
+  ```scheme
+  (define make-vect cons)
+  (define xcor-vect car)
+  (define ycor-vect cdr)
+  
+  (define (add-vect v1 v2)
+    (make-vect (+ (xcor-vect v1) (xcor-vect v2)) (+ (ycor-vect v1) (ycor-vect v2))))
+  
+  (define (sub-vect v1 v2)
+    (make-vect (- (xcor-vect v1) (xcor-vect v2)) (- (ycor-vect v1) (ycor-vect v2))))
+  
+  (define (scale-vect s v)
+    (make-vect (* s (xcor-vect v)) (* s (ycor-vect v))))
+  ```
+
+- 2.47
+
+  ```scheme
+  (define (make-frame origin edge1 edge2)
+    (list origin edge1 edge2))
+  
+  (define origin-frame car)
+  (define edge1-frame cadr)
+  (define edge2-frame caddr)
+  
+  ;alternatively
+  
+  (define (make-frame origin edge1 edge2)
+    (cons origin (cons edge1 edge2)))
+  
+  (define origin-frame car)
+  (define edge1-frame cadr)
+  (define edge2-frame cddr); this is the only difference since the ending nil doesn't exist
+  ```
+
+A painter procedure takes a frame and paints the image within it. For example, if a painter only involves drawing segments:
+```scheme
+(define (segments->painter segment-list)
+  (lambda (frame)
+    (for-each
+     (lambda (segment)
+       (draw-line
+        ((frame-coord-map frame) (start-segment segment))
+        ((frame-coord-map frame) (end-segment segment))))
+     segment-list)))
+```
+
+Where `for-each` is just map with no return value. The segments are given using the unit square cooridinate and this procedure maps it to plane coordinates using `frame`.
+
+Representing painters as procedures erects a powerful abstraction barrier in the picture language: the details of how the picture is drawn doesn't matter to us. This is the second instance of procedural representation of data.
+
+- 2.48
+
+  ```scheme
+  (define make-segment cons)
+  (define start-segment car)
+  (define end-segment cdr)
+  ```
+
+- 2.49
+
+  ```scheme
+  (define painter-a
+    (let ((a (make-vect 0 0))
+          (b (make-vect 0 1))
+          (c (make-vect 1 1))
+          (d (make-vect 1 0)))
+      (segments->painter (list (make-segment a b)
+                               (make-segment b c)
+                               (make-segment c d)
+                               (make-segment d a)))))
+  
+  (define painter-b
+    (let ((a (make-vect 0 0))
+          (b (make-vect 0 1))
+          (c (make-vect 1 1))
+          (d (make-vect 1 0)))
+      (segments->painter (list (make-segment a c)
+                               (make-segment b d)))))
+  
+  (define painter-c
+    (let ((a (make-vect 0 0.5))
+          (b (make-vect 0.5 1))
+          (c (make-vect 1 0.5))
+          (d (make-vect 0.5 0)))
+      (segments->painter (list (make-segment a b)
+                               (make-segment b c)
+                               (make-segment c d)
+                               (make-segment d a)))))
+  
+  (define wave
+    fuck off)
+  ```
+
+Painter operations works by creating a painter that invokes the argument painters with respect the different frames. For example, `flip-vert` doesn't need to know how painters work: they just flip the frame upside down.
+
+ painter operations are based on `transform-painter`:
+
+```scheme
+(define (transform-painter painter origin corner1 corner2)
+  (lambda (frame)
+    (let ((m (frame-coord-map frame)))
+      (let ((new-origin (m origin)))
+        (painter
+         (make-frame new-origin
+                     (sub-vect (m corner1) new-origin)
+                     (sub-vect (m corner2) new-origin)))))))
+```
+
+This procedure takes three unit–square coordinate vectors and use them as the new frame for the painter.
+Here are some examples:
+
+```scheme
+(define (flip-vert painter)
+  (transform-painter painter
+                     (make-vect 0.0 1.0)    ; new origin
+                     (make-vect 1.0 1.0)    ; new end of edge1
+                     (make-vect 0.0 0.0)))  ; new end of edge2
+
+
+(define (shrink-to-upper-right painter)
+  (transform-painter painter
+                     (make-vect 0.5 0.5)
+                     (make-vect 1.0 0.5)
+                     (make-vect 0.5 1.0)))
+
+
+(define (rotate90 painter)
+  (transform-painter painter
+                     (make-vect 1.0 0.0)
+                     (make-vect 1.0 1.0)
+                     (make-vect 0.0 0.0)))
+
+
+(define (squash-inwards painter)
+  (transform-painter painter
+                     (make-vect 0.0 0.0)
+                     (make-vect 0.65 0.35)
+                     (make-vect 0.35 0.65)))
+```
+
+To define compound painter, just do this:
+```scheme
+(define (beside painter1 painter2)
+  (let ((split-point (make-vect 0.5 0.0)))
+    (let ((paint-left
+           (transform-painter painter1
+                              (make-vect 0.0 0.0)
+                              split-point
+                              (make-vect 0.0 1.0)))
+          (paint-right
+           (transform-painter painter2
+                              split-point
+                              (make-vect 1.0 0.0)
+                              (make-vect 0.5 1.0))))
+      (lambda (frame)
+        (paint-left frame)
+        (paint-right frame))))); note that you can use two parenthesis in a procedure.
+```
+
+Observe how the procedural painter data abstraction makes it easier for us to create compound painters without know details of implementation. (The passing of frame as an argument creates ways to manipulate abstraction).
+
+- 2.50
+
+  ```scheme
+  (define (flip-horiz painter)
+    (transform-painter painter
+                       (make-vect 1.0 0.0)
+                       (make-vect 0.0 0.0)
+                       (make-vect 1.0 1.0)))
+  
+  (define (rotate180 painter)
+      (transform-painter painter
+                         (make-vect 1.0 1.0)
+                         (make-vect 0.0 1.0)
+                         (make-vect 1.0 0.0)))
+  
+  (define (rotate270 painter)
+      (transform-painter painter
+                         (make-vect 0.0 1.0)
+                         (make-vect 0.0 0.0)
+                         (make-vect 1.0 1.0)))
+  ```
+
+- 2.51
+
+  ```scheme
+  (define (below painter1 painter2)
+    (let ((split-point (make-vect 0.0 0.5)))
+      (let ((paint-down
+             (transform-painter painter1
+                                (make-vect 0.0 0.0)
+                                (make-vect 1.0 0.0)
+                                split-point))
+            (paint-up
+             (transform-painter painter2
+                                split-point
+                                (make-vect 1.0 0.5)
+                                (make-vect 0.0 1.0))))
+        (lambda (frame)
+          (paint-down frame)
+          (paint-up frame)))))
+  
+  ;alternatively
+  
+  (define (below painter1 painter2)
+    (rotate270 (beside (rotate90 painter1) (rotate90 painter2))))
+  ; I am not sure this is right.
+  ```
+
+This picture language exhibits some of the crucial ideas:
+
+- Fundemental data abstractions are procedural, which enables the language the handle different basic drawing capabilities in a uniform way (through message passing using the frame parameter)
+- The means of combination satisfy the closure property, which permits us to easily build up complex designs
+
+We have obtained another critical idea: *stratified design.* This idea requires complex system to be structured as a sequence of levels, with each level constructed by combining parts that are regarded as primitive at that level, and the parts constructed at each level are used as primitives at the next level. The language used at each level of a stratified design has primitives, means of combination, and means of abstraction appropriate to that level of detail.
+
+- 2.52
+  a. Fuck off
+  b. I really don't want to do this.
+
+## 2.3 Symbolic Data
+
