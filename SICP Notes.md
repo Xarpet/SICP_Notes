@@ -3271,3 +3271,302 @@ We have obtained another critical idea: *stratified design.* This idea requires 
 
 ## 2.3 Symbolic Data
 
+All the compound data objects we have used so far were constructed ultimately from numbers. In this section we will introduce the ability to work with arbitrary symbols as data.
+
+### 2.3.1 Quotation
+
+We can have lists such as
+```scheme
+(a b c d)
+((Norah 12) (Molly 9) (Anna 7) (Lauren 6) (Charlotte 4))
+```
+
+In order to manipulate symbols, we need the ability to *quote* a data object. Because, in order to construct `(a b)`, we cannot accomplish that with `(list a b)` because the interpreter will infer to the values of `a` and `b` instead of using them literally. This issue is well known in natural languages where words may be regarded either as semantic entities or as syntatic entities (literal character strings).
+
+We put a single quotation mark at the beginning of an object to treat them as data objects rather than as expressions to be evaluated.
+
+```scheme
+(define a 1)
+(define b 2)
+(list a b)
+(1 2)
+(list 'a 'b)
+(a b)
+(list 'a b)
+(a 2)
+```
+
+Quotation also allows us to represent compound objects using the conventional printed representation for lists: (note that we don't need additional quotation for the elements inside the list)
+```scheme
+(car '(a b c))
+a
+(cdr '(a b c))
+(b c)
+;alternatively because ' is just an abbreviation of (quote )
+(car (quote (a b c)))
+a
+```
+
+Lisp stands for list programming. Now we will show that every expression in lisp can be seen as a list and therefore can be manipulated as a data object:
+
+```scheme
+(square (+ ))
+; can be constructed as
+(list 'square ())
+```
+
+Now we can finally obtain empty list by evaluating `'()` and stop using `nil`.
+
+Another primitive is `eq?` which takes two symbols and tests whether they are the same. The definition of "same" between two symbols is to have the exact same characters in the same order.
+We can define `memq?` which examines if a symbol is contained in a list:
+
+```scheme
+(define (memq item x)
+  (cond ((null? x) false)
+        ((eq? item (car x)) x)
+        (else (memq item (cdr x)))))
+```
+
+
+
+#### Exercise 2.53-55
+
+- 2.53
+
+  ```scheme
+  > (list 'a 'b 'c)
+  (a b c)
+  > (list (list 'george))
+  ((george))
+  > (cdr '((x1 x2) (y1 y2)))
+  ((y1 y2))
+  > (cadr '((x1 x2) (y1 y2)))
+  (y1 y2)
+  > (pair? (car '(a short list)))
+  #f
+  > (memq 'red '((red shoes) (blue socks)))
+  #f
+  > (memq 'red '(red shoes blue socks))
+  (red shoes blue socks)
+  ```
+
+- 2.54
+
+  ```scheme
+  (define (equal? x y)
+    (cond ((and (symbol? x) (symbol? y))
+           (eq? x y))
+          ((and (list? x) (list? y))
+           (cond ((and (null? x) (null? y))   
+              #t)
+            ((or (null? x) (null? y))     
+              #f)
+            ((equal? (car x) (car y))     
+              (equal? (cdr x) (cdr y)))   
+            (else
+              #f)))))
+  ```
+
+  Note how we treat cases of symbols and different length lists
+
+- 2.55
+
+  ```scheme
+  (car ''abracadabra)
+  (car '(quote abracadabra))
+  'quote
+  quote
+  ```
+
+### 2.3.2 Example: Symbolic Differentiation
+
+Now we want to build a simple CAS system enabling symbolic differentiation. Historically this is the intended purpose of lisp.
+
+We will begin with the principle of data abstraction.
+
+We will consider only addition and multiplication. The basic rules are:
+$$
+\derivative{c}{x}=0,\text{ for $c$ a constant of a variable other than $x$} \\
+\derivative{x}{x}=1 \\
+\derivative{(u+v)}{x}=\derivative{u}{x}+\derivative{v}{x}\\
+\derivative{(uv)}{x}=u\derivative{v}{x}+v\derivative{u}{x}
+$$
+Note how the latter two rules are recursive in nature.
+
+To implement these rules we again indulge in some wishful thinking. We should be able to tell whether an expression is a sum, product, variable or constant. We should be able to extract parts of a sum or multiplication expression. We should be able to construct expressions from parts.
+
+```scheme
+(variable? e)
+(same-variable? v1 v2)
+(sum? e)
+(addend e) ;the first addition part
+(augend e) ;the second addition part
+(make-sum a1 a2)
+(product? e)
+(multiplier e)
+(multiplicand 3)
+(make-product m1 m2)
+```
+
+Using these, and the primitive `number?`, we can write the procedure:
+
+```scheme
+(define (deriv exp var)
+  (cond ((number? exp) 0)
+        ((variable? exp)
+         (if (same-variable? exp var) 1 0))
+        ((sum? exp)
+         (make-sum (deriv (addend exp) var)
+                   (deriv (augend exp) var)))
+        ((product? exp)
+         (make-sum
+           (make-product (multiplier exp)
+                         (deriv (multiplicand exp) var))
+           (make-product (deriv (multiplier exp) var)
+                         (multiplicand exp))))
+        (else
+         (error "unknown expression type -- DERIV" exp))))
+```
+
+Now we must represent algebraic expressions. One very intuitive choice is to use the same prefix notation the Lisp uses:
+
+- Variables are symbols. They are the same if the symbols representing them are `eq?`
+  ```scheme
+  (define variable? symbol?)
+  
+  (define (same-variable? v1 v2)
+    (and (variable? v1) ((variable? v2) (eq? v1 v2))))
+  ```
+
+- Sums and products are lists:
+  ```scheme
+  (define (make-sum a1 a2) (list '+ a1 a2))
+  
+  (define (make-product m1 m2) (list '* m1 m2))
+  
+  (define (sum? x)
+    (and (pair? x) (eq? (car x) '+)))
+  
+  (define (addend s) (cadr s))
+  
+  (define (augend s) (caddr s))
+  
+  (define (product? x)
+    (and (pair? x) (eq? (car x) '*)))
+  
+  (define (multiplier p) (cadr p))
+  
+  (define (multiplicand p) (caddr p))
+  ```
+
+Now `deriv` is usable. However it does not reduce answers to simplest form. Similar to what we did to the rational numbers, we only need to change the constructor to solve this.
+```scheme
+(define (make-sum a1 a2)
+  (cond ((=number? a1 0) a2)
+        ((=number? a2 0) a1)
+        ((and (number? a1) (number? a2)) (+ a1 a2))
+        (else (list '+ a1 a2))))
+
+(define (=number? exp num)
+  (and (number? exp) (= exp num)))
+
+(define (make-product m1 m2)
+  (cond ((or (=number? m1 0) (=number? m2 0)) 0)
+        ((=number? m1 1) m2)
+        ((=number? m2 1) m1)
+        ((and (number? m1) (number? m2)) (* m1 m2))
+        (else (list '* m1 m2))))
+```
+
+The above constructors now treat zero and one correctly, as well as actually calculate the numeric operations.
+
+#### Exercise 2.56-58
+
+- 2.56
+
+  ```scheme
+  (define (make-exponentation base exponent)
+    (cond ((=number? exponent 0) 1)
+          ((=number? exponent 1) base)
+          (else (list '** base exponent))))
+  
+  (define (exponentation? exp)
+    (and (pair? exp) (eq? (car exp) '**)))
+  
+  (define (base exp)
+    (cadr exp))
+  
+  (define (exponent exp)
+    (caddr exp))
+  
+  (define (deriv exp var)
+    (cond ((number? exp) 0)
+          ((variable? exp)
+           (if (same-variable? exp var) 1 0))
+          ((sum? exp)
+           (make-sum (deriv (addend exp) var)
+                     (deriv (augend exp) var)))
+          ((product? exp)
+           (make-sum
+             (make-product (multiplier exp)
+                           (deriv (multiplicand exp) var))
+             (make-product (deriv (multiplier exp) var)
+                           (multiplicand exp))))
+          ((exponentation? exp) ; this is changed
+           (make-product (make-product (exponent exp)
+                                       (make-exponentation (base exp) (make-sum -1 (exponent exp))))
+                         (deriv (base exp))))
+          (else
+           (error "unknown expression type -- DERIV" exp))))
+  ```
+
+- 2.57
+  You **must** realize that only modifying the selector would be enough, since we never use more than two arguments when we call the constructor. The selector however will have to deal with user input with multiple arguments.
+
+  ```scheme
+  (define (augend s) 
+     (if (null? (cdddr s)) 
+         (caddr s) 
+         (cons '+ (cddr s)))) 
+    
+   (define (multiplicand p) 
+     (if (null? (cdddr p)) 
+         (caddr p) 
+         (cons '* (cddr p)))) 
+  ```
+
+  Only modifying these two procedures will yield the correct results.
+
+- 2.58
+  A brilliant solution involving only changing the predicate and the selector:
+
+  ```scheme
+  (define (sum? x)
+    (and (pair? x) (memq '+ x))) ; if there is any plus sign, it gets processed first (because this is fold-right process)
+  
+  (define (addend s)
+    (if (eq? (cadr s) '*)
+        (list (car s) (cadr s) (addend (cddr s)))
+        (car s)))
+  ; if the first term is a product, we remove the first multiplier and try again;
+  
+  (define (augend s)
+    (if (eq? (cadr s) '*)
+        (augend (cddr s))
+        (if (null? (cdddr s)) 
+         (caddr s)
+         (cddr s))))
+  ; 
+  
+  (define (product? x)
+    (and (pair? x) (not (memq '+ x)) (memq '* x)))
+  
+  (define (multiplier p) (car p))
+  
+  (define (multiplicand p) 
+     (if (null? (cdddr p)) 
+         (caddr p) 
+         (cddr p)))
+  ```
+
+  
